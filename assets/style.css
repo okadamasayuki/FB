@@ -29,6 +29,9 @@
 
 * { box-sizing: border-box; }
 
+/* display を明示した要素では hidden 属性が効かなくなるので、ここで勝たせる */
+[hidden] { display: none !important; }
+
 html, body { margin: 0; padding: 0; }
 
 body {
@@ -256,11 +259,16 @@ textarea:focus-visible, button:focus-visible, a:focus-visible, input:focus-visib
 
 /* ---------- 空 / ステータス ---------- */
 .empty {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
   text-align: center;
   color: var(--text-dim);
   font-size: 13px;
   padding: 44px 12px;
 }
+
+.empty-msg { margin: 0; }
 
 .load-status {
   margin: 16px 2px 0;

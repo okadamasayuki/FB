@@ -7,7 +7,8 @@
 <meta name="robots" content="noindex, nofollow">
 <title>FB</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%238a9199'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="./assets/style.css">
+<!-- ?v= はキャッシュ避け。assets/ を変えたら必ず上げる（古い CSS と新しい JS が混ざるのを防ぐ） -->
+<link rel="stylesheet" href="./assets/style.css?v=4">
 </head>
 <body>
 
@@ -31,7 +32,7 @@
 
   <div id="files" class="file-list"></div>
 
-  <p id="empty-state" class="empty" hidden>ファイルがありません</p>
+  <div id="empty-state" class="empty" hidden></div>
   <p id="load-status" class="load-status"></p>
 </main>
 
@@ -65,6 +66,6 @@
   </div>
 </dialog>
 
-<script src="./assets/app.js"></script>
+<script src="./assets/app.js?v=4"></script>
 </body>
 </html>

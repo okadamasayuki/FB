@@ -126,7 +126,7 @@ function render() {
   list.textContent = '';
   for (const file of files) list.appendChild(renderRow(file));
 
-  $('#empty-state').hidden = files.length > 0;
+  renderEmptyState(files.length);
   $('#bulk-bar').hidden = files.length === 0;
 
   // 消えたファイルの選択状態を掃除する
@@ -138,6 +138,37 @@ function render() {
   selectAll.indeterminate = state.selected.size > 0 && state.selected.size < files.length;
   $('#sel-count').textContent = state.selected.size ? `${state.selected.size} 件選択中` : '';
   $('#btn-del-selected').disabled = state.selected.size === 0;
+}
+
+/**
+ * 0 件のときの案内。削除して 0 件になった場合は、
+ * 設定を開かなくてもその場で戻せるようにする。
+ */
+function renderEmptyState(visibleCount) {
+  const box = $('#empty-state');
+  box.hidden = visibleCount > 0;
+  if (visibleCount > 0) return;
+
+  box.textContent = '';
+  const hiddenCount = state.files.filter((f) => state.removed.has(f.path)).length;
+
+  const msg = el('p', 'empty-msg');
+  msg.textContent = hiddenCount
+    ? `${hiddenCount} 件すべてを削除しています`
+    : 'ファイルがありません';
+  box.appendChild(msg);
+
+  if (hiddenCount) {
+    const restore = el('button', 'small');
+    restore.type = 'button';
+    restore.textContent = '元に戻す';
+    restore.addEventListener('click', () => {
+      state.removed = new Set();
+      persistRemoved();
+      render();
+    });
+    box.appendChild(restore);
+  }
 }
 
 function renderRow(file) {
