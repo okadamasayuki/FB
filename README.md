@@ -1,148 +1,67 @@
-# GitHub パス ダウンローダー
+# FB
 
-登録しておいた GitHub のパス（フォルダ）にあるファイルを、一覧からワンクリックでダウンロードするための小さな静的サイトです。GitHub Pages でそのまま動きます。
+会社と個人の端末のあいだでファイルを受け渡すための、小さな静的サイトです。GitHub Pages で動きます。
 
-公開 URL: **https://okadamasayuki.github.io/FB/**
+URL: **https://okadamasayuki.github.io/FB/**
+
+## 考え方
+
+ファイルの実体を **このリポジトリの `files/` に置き、サイト自身が配ります**。
+`raw.githubusercontent.com` や `api.github.com` といった別のホストは一切参照しません。
+このページが開ける環境なら、どんなネットワークでも必ずダウンロードできます。
+ダウンロードボタンも素の `<a download>` で、JavaScript も fetch も挟みません。
 
 ## できること
 
-- 登録したパスを一覧表示（表示名・リポジトリ・ブランチ・登録日時）
-- パス配下のファイル一覧（ファイル名・サイズ・登録日時）
-- 各ファイル行の **⬇ ダウンロード** で、そのファイルをそのまま保存（ZIP にはしません）
-- パス配下を **まとめて ZIP** でダウンロード（ファイルを選んで ZIP も可）
-- 対象が 1 ファイルのときは、まとめて保存でも ZIP にせずそのまま落とします
-- 削除：ボタン、**左スワイプ**（スマホ）、選択して一括削除、全削除
+- ファイル名と日付の一覧（開いた時点でそのまま並びます）
+- 1 クリックでダウンロード
+- 削除：行の削除ボタン、**左スワイプ**、選択して一括削除、全削除
 - 削除した直後は「元に戻す」で復活できます
-- 非公開リポジトリ向けに、GitHub トークンを設定する画面あり
 
-## 2 通りの配り方
+削除はその端末で見えなくするだけで、`files/` からは消えません。
+すべて戻したいときは設定（⚙）→「削除したものを元に戻す」。
 
-### 1. ファイル置き場（`files/`）— いちばん確実
+## ファイルを追加する
 
-ファイルをこのリポジトリの `files/` に置き、`data/files.json` に 1 行足すと、一覧の先頭に「ファイル置き場」として出ます。
-
-サイトと**同じサーバ**から配るので、`raw.githubusercontent.com` や `api.github.com` を一切経由しません。
-社内ネットワークでそれらが遮断されていても、このサイトが開けるなら必ずダウンロードできます。
-ダウンロードボタンも素の `<a download>` で、JavaScript も fetch も挟みません。
-
-```json
-{
-  "label": "ファイル置き場",
-  "files": [
-    {
-      "path": "files/plan_automation_workflow.yml",
-      "size": 5392,
-      "uploadedAt": "2026-08-04T21:20:00+09:00",
-      "note": "Dify ワークフロー YAML"
-    }
-  ]
-}
-```
-
-| キー | 必須 | 意味 |
-| --- | --- | --- |
-| `path` | ○ | リポジトリ直下からの相対パス |
-| `name` | | ダウンロード時のファイル名（省略時は `path` の末尾） |
-| `size` | | バイト数（一覧に表示するだけ） |
-| `uploadedAt` | | ここに置いた日時（ISO 8601） |
-| `note` | | 一覧に出るひとことメモ |
-
-#### 元リポジトリからの自動同期
-
-`data/sync.json` に書いた元リポジトリを **1 時間おきに見に行き、変わっていればコピーし直して公開まで自動で行います**（`.github/workflows/sync-files.yml`）。すぐ反映したいときは Actions タブから *Sync files from source repos* を手動実行してください。
-
-```json
-{
-  "sources": [
-    {
-      "repo": "okadamasayuki/plan_automation_dify",
-      "ref": "",
-      "files": [
-        { "from": "dify/plan_automation_workflow.yml", "to": "files/plan_automation_workflow.yml", "note": "Dify ワークフロー YAML" }
-      ]
-    }
-  ]
-}
-```
-
-- `ref` を空にすると、元リポジトリのデフォルトブランチを自動で解決します（ブランチ名を変えても追随します）
-- 中身が変わっていないファイルは書き換えず、`uploadedAt` も据え置きます
-- `data/files.json` に手で足したエントリは消しません
-- Actions が push したコミットでは通常の push トリガーが発火しないため、同期ジョブから `pages.yml` を直接呼んで公開しています
-- 元リポジトリを**非公開に戻した**場合は、Contents: Read-only の PAT を `SYNC_TOKEN` シークレットに登録してください（公開のままなら不要）
-
-### 2. GitHub のパスを参照する（`data/registry.json`）
-
-常に最新が見えるかわりに、ブラウザから GitHub へアクセスできる必要があります。
-登録先は 2 か所あります。
-
-#### 2-1. 共有リスト（`data/registry.json`）
-
-リポジトリにコミットされるので、**どの端末で開いても同じものが見えます**。
-Claude に次のように伝えると、ここに追記してくれます。
+置きたいファイルの場所を伝えてください。形式はこれで足ります。
 
 ```
-このパス登録しといて: https://github.com/owner/repo/tree/main/docs/invoices
+owner/repo/フォルダ/ファイル名
 ```
 
-`data/registry.json` の中身はこんな形です。
+`data/sync.json` に追加され、以降は **1 時間おきに自動で取りに行き、更新されていれば差し替えます**。
+一度伝えれば、あとは手をかける必要はありません。
 
-```json
-{
-  "entries": [
-    {
-      "label": "請求書 2026",
-      "path": "owner/repo/docs/invoices",
-      "ref": "main",
-      "recursive": false,
-      "addedAt": "2026-08-04T10:00:00+09:00"
-    }
-  ]
-}
-```
+現在の取得元は設定（⚙）→「取得元」で確認できます。
 
-| キー | 必須 | 意味 |
-| --- | --- | --- |
-| `path` | ○ | `owner/repo/フォルダ` または GitHub の URL（`/tree/`・`/blob/` 付きも可） |
-| `label` | | 一覧での表示名（省略時はフォルダ名） |
-| `ref` | | ブランチ／タグ／コミット（省略時はデフォルトブランチ） |
-| `recursive` | | `true` でサブフォルダの中も一覧に含める |
-| `addedAt` | | 登録日時（ISO 8601）。並び順と「登録日」表示に使用 |
-| `note` | | 一覧に出るひとことメモ |
-| `id` | | 省略可。省略時は `path` から自動生成 |
+## 自動同期のしくみ
 
-#### 2-2. サイト上の「パスを追加する」
+`.github/workflows/sync-files.yml` が毎時 15 分に動きます。
 
-その場で追加できますが、保存先はブラウザの localStorage なので **その端末だけ** に残ります。
-共有リストに移したいときは、設定（⚙）→「登録データ」の JSON をコピーして Claude に渡してください。
+1. `data/sync.json` に書かれた場所からファイルを取得
+2. 中身が変わっていれば `files/` を更新し、`data/files.json` の日付を書き換え
+3. コミットして、そのまま公開まで実行
 
-## 削除の挙動
+- 中身が同じファイルは書き換えません。日付は**実際に更新された日**を指します
+- `ref` を空にしておくと、取得元のデフォルトブランチを自動で解決します
+- 取得元が非公開リポジトリの場合は、Contents: Read-only の PAT を `SYNC_TOKEN` シークレットに登録してください
+- すぐ反映したいときは Actions タブから *Sync files from source repos* を手動実行
 
-| 対象 | 削除すると |
-| --- | --- |
-| この端末で追加したもの | localStorage から消えます |
-| 共有リスト由来のもの | その端末で非表示になるだけで、`data/registry.json` は変わりません |
-
-共有リストから完全に消したいときは、Claude に「あれ消しといて」と伝えて `data/registry.json` を更新してもらってください。
-設定（⚙）→「この端末の変更をリセット」で、共有リストそのままの状態に戻せます。
-
-## GitHub トークン（任意）
-
-- 未設定でも公開リポジトリなら動きます（GitHub API の上限は 1 時間あたり 60 回）
-- 非公開リポジトリを扱う場合、または上限を上げたい場合は設定（⚙）から登録します
-- 推奨は **fine-grained personal access token / Repository permissions → Contents: Read-only**
-- トークンはそのブラウザの localStorage にだけ保存され、リポジトリには一切保存されません。共用端末では使わないでください
+Actions が push したコミットでは通常の push トリガーが発火しないため、
+同期ジョブから `pages.yml` を `workflow_call` で直接呼んでいます。
 
 ## 構成
 
 ```
-index.html                     画面
-assets/style.css               スタイル（ライト／ダーク対応）
-assets/app.js                  ロジック（依存ライブラリなし。ZIP 生成も自前）
-files/                         サイトから直接配るファイルの実体
-data/files.json                files/ の一覧（ファイル置き場）
-data/registry.json             GitHub パスの共有登録リスト
-.github/workflows/pages.yml    GitHub Pages への自動デプロイ
+index.html                        画面
+assets/style.css                  スタイル（ライト／ダーク対応）
+assets/app.js                     ロジック（依存ライブラリなし）
+files/                            配布するファイルの実体
+data/files.json                   一覧に出すファイルと日付
+data/sync.json                    自動同期の取得元
+scripts/sync-files.mjs            同期スクリプト
+.github/workflows/sync-files.yml  定期同期
+.github/workflows/pages.yml       GitHub Pages への公開
 ```
 
 ビルド不要です。ローカルで確認するときは、リポジトリ直下で次を実行して `http://localhost:8000/` を開きます。
@@ -151,35 +70,4 @@ data/registry.json             GitHub パスの共有登録リスト
 python3 -m http.server 8000
 ```
 
-（`file://` で直接開くと `data/registry.json` の読み込みがブロックされます）
-
-## デプロイ
-
-公開されるまでに、リポジトリ設定を 1 回だけ変更する必要があります（API では変更できない箇所です）。
-どちらか片方でかまいません。
-
-### A. ブランチから直接公開する（いちばん手軽）
-
-**Settings → Pages → Build and deployment**
-
-- Source: **Deploy from a branch**
-- Branch: **`claude/github-path-file-downloader-x0oo8c`** / **`/ (root)`** → Save
-
-1 分ほどで公開されます。GitHub Actions は不要です。
-
-### B. GitHub Actions で公開する
-
-**Settings → Pages → Build and deployment → Source: GitHub Actions**
-
-これで `github-pages` 環境が正しく作られ、`.github/workflows/pages.yml` が
-`main` / `master` / `claude/**` への push のたびにサイト全体を公開します。
-設定後は Actions タブから最新のワークフローを **Re-run** してください。
-
-> 設定前は、`build` ジョブ（Pages の有効化とアーティファクトのアップロード）は成功しますが、
-> `github-pages` 環境を参照する `deploy` ジョブが開始前に拒否されて失敗します。
-
-### 補足
-
-このリポジトリは `claude/github-path-file-downloader-x0oo8c` が現在のデフォルトブランチです。
-`main` に整理したい場合は Settings → Branches からリネームしてください
-（ワークフローは `main` への push にも対応しています）。
+（`file://` で直接開くと `data/files.json` の読み込みがブロックされます）

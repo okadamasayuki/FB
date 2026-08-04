@@ -8,7 +8,6 @@
   --accent: #1f6feb;
   --accent-text: #ffffff;
   --danger: #cf222e;
-  --ok: #1a7f37;
   --radius: 14px;
   --shadow: 0 1px 2px rgba(27, 31, 36, .06), 0 4px 14px rgba(27, 31, 36, .05);
 }
@@ -24,17 +23,13 @@
     --accent: #4493f8;
     --accent-text: #06101f;
     --danger: #f85149;
-    --ok: #3fb950;
     --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 4px 14px rgba(0, 0, 0, .3);
   }
 }
 
 * { box-sizing: border-box; }
 
-html, body {
-  margin: 0;
-  padding: 0;
-}
+html, body { margin: 0; padding: 0; }
 
 body {
   background: var(--bg);
@@ -64,48 +59,18 @@ code {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 16px calc(10px);
-  padding-top: max(10px, env(safe-area-inset-top));
+  padding: 12px 16px;
+  padding-top: max(12px, env(safe-area-inset-top));
   background: color-mix(in srgb, var(--surface) 88%, transparent);
   backdrop-filter: saturate(180%) blur(12px);
   border-bottom: 1px solid var(--border);
 }
 
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-
-.logo {
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  flex: none;
-  border-radius: 10px;
-  background: var(--accent);
-  color: var(--accent-text);
-  font-size: 17px;
-}
-
 .app-bar h1 {
   margin: 0;
-  font-size: 16px;
-  line-height: 1.25;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.app-bar .sub {
-  margin: 0;
-  font-size: 11.5px;
-  color: var(--text-dim);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: .02em;
 }
 
 .bar-actions {
@@ -116,9 +81,9 @@ code {
 
 /* ---------- 共通パーツ ---------- */
 main {
-  max-width: 760px;
+  max-width: 680px;
   margin: 0 auto;
-  padding: 16px 12px 40px;
+  padding: 16px 12px 48px;
 }
 
 button {
@@ -129,19 +94,12 @@ button {
   background: var(--surface);
   color: var(--text);
   padding: 8px 14px;
-  transition: filter .12s ease, background .12s ease;
+  transition: filter .12s ease;
 }
 
 button:hover { filter: brightness(1.05); }
 button:active { transform: translateY(1px); }
-button:disabled { opacity: .5; cursor: default; transform: none; }
-
-button.primary {
-  background: var(--accent);
-  border-color: transparent;
-  color: var(--accent-text);
-  font-weight: 600;
-}
+button:disabled { opacity: .45; cursor: default; transform: none; }
 
 button.small { padding: 5px 10px; font-size: 13px; }
 button.danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 35%, var(--border)); }
@@ -157,45 +115,7 @@ button.danger.ghost { background: transparent; }
   background: var(--surface-2);
 }
 
-.panel {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  margin-bottom: 14px;
-  overflow: hidden;
-}
-
-.panel summary {
-  cursor: pointer;
-  padding: 13px 16px;
-  font-weight: 600;
-  list-style: none;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.panel summary::-webkit-details-marker { display: none; }
-
-.panel summary::before {
-  content: "＋";
-  color: var(--accent);
-  font-weight: 700;
-}
-
-.panel details[open] summary::before { content: "−"; }
-
-#add-form {
-  padding: 0 16px 16px;
-  display: grid;
-  gap: 12px;
-}
-
-.field { display: grid; gap: 5px; }
-.field > span { font-size: 12.5px; color: var(--text-dim); }
-
-input[type="text"], input[type="password"], textarea {
+input[type="text"], textarea {
   font: inherit;
   width: 100%;
   padding: 9px 11px;
@@ -208,11 +128,11 @@ input[type="text"], input[type="password"], textarea {
 textarea {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 12px;
-  line-height: 1.5;
+  line-height: 1.7;
   resize: vertical;
 }
 
-input:focus-visible, textarea:focus-visible, button:focus-visible, summary:focus-visible {
+textarea:focus-visible, button:focus-visible, a:focus-visible, input:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
@@ -221,21 +141,19 @@ input:focus-visible, textarea:focus-visible, button:focus-visible, summary:focus
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13.5px;
+  font-size: 13px;
   cursor: pointer;
 }
 
-.check.compact { font-size: 13px; }
-.check input, .entry-check, .file-check { width: 17px; height: 17px; accent-color: var(--accent); flex: none; }
+.check input, .file-check { width: 17px; height: 17px; accent-color: var(--accent); flex: none; }
 
 .hint { margin: 0; font-size: 12px; color: var(--text-dim); line-height: 1.65; }
-.warn { margin: 0; font-size: 12px; color: var(--danger); line-height: 1.6; }
-.row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 
 /* ---------- 一括操作バー ---------- */
 .toolbar {
   position: sticky;
-  top: 56px;
+  top: 58px;
   z-index: 15;
   display: flex;
   flex-wrap: wrap;
@@ -253,10 +171,10 @@ input:focus-visible, textarea:focus-visible, button:focus-visible, summary:focus
 .toolbar .spacer { flex: 1 1 auto; }
 .sel-count { font-size: 12.5px; color: var(--text-dim); }
 
-/* ---------- 登録エントリ ---------- */
-.entries { display: grid; gap: 12px; }
+/* ---------- ファイル一覧 ---------- */
+.file-list { display: grid; gap: 8px; }
 
-.entry {
+.file {
   position: relative;
   border-radius: var(--radius);
   overflow: hidden;
@@ -278,199 +196,90 @@ input:focus-visible, textarea:focus-visible, button:focus-visible, summary:focus
   pointer-events: none;
 }
 
-.entry-inner {
+.file-inner {
   position: relative;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 12px 14px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 12px 14px;
   will-change: transform;
 }
 
-.entry.swiping .entry-inner { transition: none; }
-.entry:not(.swiping) .entry-inner { transition: transform .22s cubic-bezier(.22,.61,.36,1); }
-
-.entry-head { display: flex; align-items: flex-start; gap: 10px; }
-
-.entry-title {
-  flex: 1 1 auto;
-  min-width: 0;
-  text-align: left;
-  border: 0;
-  background: none;
-  padding: 0;
-  display: grid;
-  gap: 2px;
-}
-
-.entry-title .label {
-  font-weight: 650;
-  font-size: 15px;
-  overflow-wrap: anywhere;
-}
-
-.entry-title .repo {
-  font-size: 12px;
-  color: var(--text-dim);
-  overflow-wrap: anywhere;
-}
-
-.chev {
-  flex: none;
-  color: var(--text-dim);
-  font-size: 13px;
-  transition: transform .18s ease;
-  margin-top: 3px;
-}
-
-.entry.open .chev { transform: rotate(90deg); }
-
-.entry-meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 10px;
-  margin: 8px 0 0 27px;
-  font-size: 11.5px;
-  color: var(--text-dim);
-}
-
-.badge {
-  border: 1px solid var(--border);
-  background: var(--surface-2);
-  border-radius: 999px;
-  padding: 1px 8px;
-  font-size: 11px;
-}
-
-.badge.local { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
-
-.entry-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-  margin: 11px 0 0 27px;
-}
-
-.entry-actions a.small {
-  display: inline-flex;
-  align-items: center;
-  border-radius: 9px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text);
-  padding: 5px 10px;
-  font-size: 13px;
-  text-decoration: none;
-}
-
-/* ---------- ファイル一覧 ---------- */
-.files {
-  margin: 12px 0 0 27px;
-  border-top: 1px solid var(--border);
-  padding-top: 10px;
-}
-
-.entry:not(.open) .files { display: none; }
-
-.files-bar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.file-list { display: grid; gap: 2px; }
-
-.file {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 7px 8px;
-  border-radius: 10px;
-}
-
-.file:hover { background: var(--surface-2); }
+.file.swiping .file-inner { transition: none; }
+.file:not(.swiping) .file-inner { transition: transform .22s cubic-bezier(.22,.61,.36,1); }
 
 .file-main { flex: 1 1 auto; min-width: 0; }
 
+.file-actions { flex: none; display: flex; gap: 8px; }
+
 .file-name {
-  font-size: 13.5px;
+  font-size: 14px;
+  font-weight: 550;
   overflow-wrap: anywhere;
 }
 
-.file-sub {
-  font-size: 11px;
+.file-date {
+  font-size: 11.5px;
   color: var(--text-dim);
-  overflow-wrap: anywhere;
+  margin-top: 1px;
 }
 
-/* button でも a でも同じ見た目にする（同一サーバのファイルは素の <a download>） */
 .dl-btn {
   flex: none;
   display: inline-flex;
   align-items: center;
-  padding: 6px 12px;
-  border: 1px solid var(--border);
+  padding: 7px 13px;
+  border: 1px solid transparent;
   border-radius: 9px;
-  background: var(--surface-2);
-  color: var(--text);
-  font: inherit;
+  background: var(--accent);
+  color: var(--accent-text);
   font-size: 13px;
   font-weight: 600;
   line-height: 1.5;
   white-space: nowrap;
   text-decoration: none;
-  cursor: pointer;
 }
 
-a.dl-btn:hover { filter: brightness(1.05); }
+.dl-btn:hover { filter: brightness(1.06); }
 
-.dl-btn.done {
-  color: var(--ok);
-  border-color: color-mix(in srgb, var(--ok) 45%, var(--border));
+.del-btn {
+  flex: none;
+  padding: 7px 11px;
+  font-size: 13px;
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 35%, var(--border));
+  background: transparent;
+  white-space: nowrap;
 }
 
-@media (max-width: 380px) {
-  .file { flex-wrap: wrap; }
-  .dl-btn { margin-left: auto; }
+/* 狭い画面ではファイル名に幅を譲り、ボタンを次の行に落とす */
+@media (max-width: 520px) {
+  .file-inner { flex-wrap: wrap; row-gap: 10px; }
+  /* チェックボックスぶん（17px + gap 11px）を引かないと右にはみ出す */
+  .file-actions { flex: 1 0 calc(100% - 28px); margin-left: 28px; }
+  .file-actions .dl-btn,
+  .file-actions .del-btn { flex: 1 1 auto; justify-content: center; text-align: center; }
 }
-
-.files .state { font-size: 12.5px; color: var(--text-dim); padding: 6px 2px; }
-.files .state.error { color: var(--danger); }
 
 /* ---------- 空 / ステータス ---------- */
 .empty {
   text-align: center;
   color: var(--text-dim);
   font-size: 13px;
-  padding: 36px 12px;
-  line-height: 1.9;
+  padding: 44px 12px;
 }
 
-.empty .big { font-size: 15px; color: var(--text); margin: 0 0 6px; }
-
-.registry-status {
+.load-status {
   margin: 16px 2px 0;
   font-size: 11.5px;
   color: var(--text-dim);
   text-align: center;
 }
 
-.registry-status.error { color: var(--danger); }
-
-.foot {
-  max-width: 760px;
-  margin: 0 auto;
-  padding: 0 14px 28px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 14px;
-  justify-content: center;
-  font-size: 11px;
-  color: var(--text-dim);
-}
+.load-status.error { color: var(--danger); }
 
 /* ---------- トースト ---------- */
 .toasts {
@@ -481,7 +290,7 @@ a.dl-btn:hover { filter: brightness(1.05); }
   z-index: 60;
   display: grid;
   gap: 8px;
-  width: min(440px, calc(100vw - 24px));
+  width: min(420px, calc(100vw - 24px));
 }
 
 .toast {
@@ -506,37 +315,6 @@ a.dl-btn:hover { filter: brightness(1.05); }
   to   { opacity: 1; transform: none; }
 }
 
-/* ---------- 進捗 ---------- */
-.progress {
-  position: fixed;
-  left: 50%;
-  bottom: calc(16px + env(safe-area-inset-bottom));
-  transform: translateX(-50%);
-  z-index: 55;
-  width: min(440px, calc(100vw - 24px));
-  padding: 11px 13px;
-  border-radius: 12px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  box-shadow: 0 8px 28px rgba(0, 0, 0, .18);
-}
-
-.progress-text { font-size: 12.5px; margin-bottom: 7px; overflow-wrap: anywhere; }
-
-.progress-track {
-  height: 5px;
-  border-radius: 3px;
-  background: var(--surface-2);
-  overflow: hidden;
-}
-
-.progress-bar {
-  height: 100%;
-  width: 0;
-  background: var(--accent);
-  transition: width .2s ease;
-}
-
 /* ---------- 設定ダイアログ ---------- */
 dialog {
   border: 1px solid var(--border);
@@ -544,7 +322,7 @@ dialog {
   padding: 0;
   background: var(--surface);
   color: var(--text);
-  width: min(560px, calc(100vw - 24px));
+  width: min(520px, calc(100vw - 24px));
   max-height: 86vh;
   box-shadow: 0 24px 60px rgba(0, 0, 0, .3);
 }
@@ -566,7 +344,3 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
 .dialog-body { padding: 16px; display: grid; gap: 24px; overflow: auto; }
 .dialog-body h3 { margin: 0 0 6px; font-size: 14px; }
 .dialog-body section { display: grid; gap: 8px; }
-
-@media (max-width: 420px) {
-  .entry-meta, .entry-actions, .files { margin-left: 0; }
-}
