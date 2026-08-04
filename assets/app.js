@@ -71,22 +71,6 @@ function formatDate(iso) {
 }
 
 /* ============================================================
- * 通知
- * ========================================================== */
-
-function toast(message, kind = '') {
-  const node = el('div', `toast ${kind}`.trim());
-  const msg = el('span', 'msg');
-  msg.textContent = message;
-  node.appendChild(msg);
-
-  const host = $('#toasts');
-  if (!host) return;
-  host.appendChild(node);
-  setTimeout(() => node.remove(), 3500);
-}
-
-/* ============================================================
  * 描画
  * ========================================================== */
 
@@ -192,17 +176,6 @@ function wireUp() {
     $('#settings-dialog')?.showModal();
   });
 
-  on('#btn-copy-sources', 'click', async () => {
-    const box = $('#sources');
-    if (!box) return;
-    try {
-      await navigator.clipboard.writeText(box.value);
-      toast('コピーしました');
-    } catch {
-      box.select();
-      toast('コピーできませんでした。手動で選択してください', 'error');
-    }
-  });
 }
 
 function init() {

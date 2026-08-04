@@ -45,15 +45,6 @@ body {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-code {
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-  font-size: .88em;
-  background: var(--surface-2);
-  border-radius: 5px;
-  padding: .1em .35em;
-  word-break: break-all;
-}
-
 /* ---------- ヘッダ ---------- */
 .app-bar {
   position: sticky;
@@ -98,7 +89,6 @@ button {
 
 button:hover { filter: brightness(1.05); }
 button:active { transform: translateY(1px); }
-button.small { padding: 5px 10px; font-size: 13px; }
 
 .icon-btn {
   width: 34px;
@@ -128,8 +118,6 @@ textarea:focus-visible, button:focus-visible, a:focus-visible {
   outline-offset: 1px;
 }
 
-.hint { margin: 0; font-size: 12px; color: var(--text-dim); line-height: 1.65; }
-.row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 
 /* ---------- ファイル一覧 ---------- */
 .file-list { display: grid; gap: 8px; }
@@ -191,37 +179,6 @@ textarea:focus-visible, button:focus-visible, a:focus-visible {
 
 .load-status.error { color: var(--danger); }
 
-/* ---------- トースト ---------- */
-.toasts {
-  position: fixed;
-  left: 50%;
-  bottom: calc(16px + env(safe-area-inset-bottom));
-  transform: translateX(-50%);
-  z-index: 60;
-  display: grid;
-  gap: 8px;
-  width: min(420px, calc(100vw - 24px));
-}
-
-.toast {
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  box-shadow: 0 8px 28px rgba(0, 0, 0, .18);
-  font-size: 13px;
-  animation: pop .18s ease;
-}
-
-.toast .msg { overflow-wrap: anywhere; }
-.toast.error { border-color: color-mix(in srgb, var(--danger) 45%, var(--border)); }
-.toast.error .msg { color: var(--danger); }
-
-@keyframes pop {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: none; }
-}
-
 /* ---------- 設定ダイアログ ---------- */
 dialog {
   border: 1px solid var(--border);
@@ -240,7 +197,6 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
   display: flex;
   align-items: center;
   padding: 14px 16px;
-  border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
   background: var(--surface);

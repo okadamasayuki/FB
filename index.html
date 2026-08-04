@@ -8,7 +8,7 @@
 <title>FB</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%238a9199'/%3E%3C/svg%3E">
 <!-- ?v= はキャッシュ避け。assets/ を変えたら必ず上げる（古い CSS と新しい JS が混ざるのを防ぐ） -->
-<link rel="stylesheet" href="./assets/style.css?v=6">
+<link rel="stylesheet" href="./assets/style.css?v=7">
 </head>
 <body>
 
@@ -25,8 +25,6 @@
   <p id="load-status" class="load-status"></p>
 </main>
 
-<div id="toasts" class="toasts" aria-live="polite"></div>
-
 <dialog id="settings-dialog">
   <form method="dialog" class="dialog-head">
     <h2>設定</h2>
@@ -35,17 +33,12 @@
 
   <div class="dialog-body">
     <section>
-      <h3>取得元</h3>
-      <p class="hint">ここに並んでいるファイルを 1 時間おきに取りに行き、更新されていれば自動で差し替えます。</p>
+      <h3>1 時間おきに自動更新</h3>
       <textarea id="sources" rows="6" spellcheck="false" readonly></textarea>
-      <div class="row">
-        <button id="btn-copy-sources" class="small" type="button">コピー</button>
-      </div>
-      <p class="hint">増やすときは <code>owner/repo/フォルダ/ファイル名</code> を、減らすときはファイル名を伝えてください。</p>
     </section>
   </div>
 </dialog>
 
-<script src="./assets/app.js?v=6"></script>
+<script src="./assets/app.js?v=7"></script>
 </body>
 </html>
