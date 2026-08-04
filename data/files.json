@@ -1,0 +1,30 @@
+{
+  "_help": {
+    "説明": "このリポジトリの files/ に置いたファイルの一覧です。サイトと同じサーバから配るので、GitHub の他のホストを一切経由せずダウンロードできます。",
+    "files の書き方": {
+      "path": "必須。リポジトリ直下からの相対パス（例 files/foo.yml）",
+      "name": "省略可。ダウンロード時のファイル名（省略時は path の末尾）",
+      "size": "省略可。バイト数（一覧に表示するだけ）",
+      "uploadedAt": "省略可。ここに置いた日時（ISO 8601）",
+      "note": "省略可。一覧に出るひとことメモ"
+    }
+  },
+  "label": "ファイル置き場",
+  "note": "このサイトから直接ダウンロードできます",
+  "files": [
+    {
+      "path": "files/plan_automation_workflow.yml",
+      "name": "plan_automation_workflow.yml",
+      "size": 5392,
+      "uploadedAt": "2026-08-04T21:20:00+09:00",
+      "note": "Dify ワークフロー YAML"
+    },
+    {
+      "path": "files/plan_automation.difypkg",
+      "name": "plan_automation.difypkg",
+      "size": 34201,
+      "uploadedAt": "2026-08-04T21:20:00+09:00",
+      "note": "Dify プラグイン"
+    }
+  ]
+}

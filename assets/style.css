@@ -406,15 +406,26 @@ input:focus-visible, textarea:focus-visible, button:focus-visible, summary:focus
   overflow-wrap: anywhere;
 }
 
+/* button でも a でも同じ見た目にする（同一サーバのファイルは素の <a download>） */
 .dl-btn {
   flex: none;
+  display: inline-flex;
+  align-items: center;
   padding: 6px 12px;
+  border: 1px solid var(--border);
   border-radius: 9px;
   background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
   font-size: 13px;
   font-weight: 600;
+  line-height: 1.5;
   white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
 }
+
+a.dl-btn:hover { filter: brightness(1.05); }
 
 .dl-btn.done {
   color: var(--ok);

@@ -11,7 +11,9 @@
 'use strict';
 
 const REGISTRY_URL = './data/registry.json';
+const FILES_URL = './data/files.json';
 const API_ROOT = 'https://api.github.com';
+const STORE_ID = 'store:local';
 
 const LS = {
   local: 'ghdl.local.v1',      // この端末で追加したエントリ
@@ -230,6 +232,11 @@ function contentsUrl(target, path, ref) {
  * パスがファイルを直接指している場合は、その 1 件だけを返す。
  */
 async function listFiles(entry) {
+  // ファイル置き場はマニフェストがそのまま一覧になる
+  if (entry.source === 'store') {
+    return { ref: null, files: entry.storeFiles, truncated: false };
+  }
+
   const target = entry.target;
   const ref = await resolveRef(target);
 
@@ -320,6 +327,18 @@ async function fetchViaApi(entry, file) {
 }
 
 async function fetchFileBytes(entry, file) {
+  // このサイト自身が配っているファイル。別ホストを一切経由しない。
+  if (file.sameOrigin) {
+    let res;
+    try {
+      res = await fetch(file.downloadUrl);
+    } catch {
+      throw new Error('ネットワークに繋がりませんでした');
+    }
+    if (!res.ok) throw new Error(`ファイルが見つかりません（${res.status}）`);
+    return new Uint8Array(await res.arrayBuffer());
+  }
+
   // まず raw を試す（速く、API の回数制限も使わない）。
   // 落ちたら理由を問わず API 経由へ回すので、ここで諦めない。
   if (file.downloadUrl && !rawUnavailable) {
@@ -454,6 +473,7 @@ function uniqueZipNames(files) {
  * ========================================================== */
 
 const state = {
+  store: null,               // files.json 由来のファイル置き場（1 エントリぶん）
   seed: [],
   local: [],
   removed: new Set(readJSON(LS.removed, [])),
@@ -492,6 +512,9 @@ function visibleEntries() {
     list.push(e);
   }
   list.sort((a, b) => String(b.addedAt || '').localeCompare(String(a.addedAt || '')));
+
+  // ファイル置き場はいちばん確実に落とせるので常に先頭に置く
+  if (state.store && !state.removed.has(STORE_ID)) list.unshift(state.store);
   return list;
 }
 
@@ -603,7 +626,9 @@ function renderEntry(entry) {
   const label = el('span', 'label');
   label.textContent = entry.label;
   const repo = el('span', 'repo');
-  repo.textContent = `${entry.target.owner}/${entry.target.repo}${entry.target.path ? ` / ${entry.target.path}` : ''}`;
+  repo.textContent = entry.target
+    ? `${entry.target.owner}/${entry.target.repo}${entry.target.path ? ` / ${entry.target.path}` : ''}`
+    : 'このサイトが配っているファイル';
   title.append(label, repo);
   title.addEventListener('click', () => toggleEntry(entry));
   head.appendChild(title);
@@ -617,12 +642,16 @@ function renderEntry(entry) {
   const meta = el('div', 'entry-meta');
   const loaded = state.files.get(entry.id);
 
-  const branch = el('span', 'badge');
-  branch.textContent = loaded?.ref || entry.target.ref || 'デフォルトブランチ';
-  meta.appendChild(branch);
+  if (entry.target) {
+    const branch = el('span', 'badge');
+    branch.textContent = loaded?.ref || entry.target.ref || 'デフォルトブランチ';
+    meta.appendChild(branch);
+  }
 
   const added = el('span');
-  added.textContent = `登録 ${formatDate(entry.addedAt)}`;
+  added.textContent = entry.source === 'store'
+    ? `最終更新 ${formatDate(entry.addedAt)}`
+    : `登録 ${formatDate(entry.addedAt)}`;
   meta.appendChild(added);
 
   if (loaded?.status === 'ready') {
@@ -637,8 +666,9 @@ function renderEntry(entry) {
     meta.appendChild(rec);
   }
 
-  const src = el('span', 'badge' + (entry.source === 'local' ? ' local' : ''));
-  src.textContent = entry.source === 'local' ? 'この端末' : '共有リスト';
+  const SOURCE_LABEL = { store: 'このサイト内', local: 'この端末', seed: '共有リスト' };
+  const src = el('span', 'badge' + (entry.source === 'seed' ? '' : ' local'));
+  src.textContent = SOURCE_LABEL[entry.source] || '共有リスト';
   meta.appendChild(src);
 
   if (entry.note) {
@@ -651,11 +681,12 @@ function renderEntry(entry) {
   /* --- 操作ボタン --- */
   const actions = el('div', 'entry-actions');
 
-  // ファイルが 1 つだけなら ZIP にせず、そのまま落とす
-  const single = loaded?.status === 'ready' && loaded.files.length === 1;
+  // ファイルが 1 つだけなら ZIP にせず、そのまま落とす。
+  // 件数が分かる前は素直に「ダウンロード」と出しておく。
+  const count = loaded?.status === 'ready' ? loaded.files.length : null;
   const allBtn = el('button', 'small primary');
   allBtn.type = 'button';
-  allBtn.textContent = single ? '⬇ ダウンロード' : '⬇ まとめてZIP保存';
+  allBtn.textContent = count > 1 ? '⬇ まとめてZIP保存' : '⬇ ダウンロード';
   allBtn.addEventListener('click', () => downloadEntryAll(entry));
   actions.appendChild(allBtn);
 
@@ -670,12 +701,14 @@ function renderEntry(entry) {
   });
   actions.appendChild(refreshBtn);
 
-  const link = el('a', 'small');
-  link.href = githubUrl(entry, loaded?.ref);
-  link.target = '_blank';
-  link.rel = 'noopener noreferrer';
-  link.textContent = 'GitHubで開く';
-  actions.appendChild(link);
+  if (entry.target) {
+    const link = el('a', 'small');
+    link.href = githubUrl(entry, loaded?.ref);
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.textContent = 'GitHubで開く';
+    actions.appendChild(link);
+  }
 
   const delBtn = el('button', 'small danger');
   delBtn.type = 'button';
@@ -776,11 +809,28 @@ function renderFiles(entry) {
     const name = el('div', 'file-name');
     name.textContent = file.name;
     const sub = el('div', 'file-sub');
-    const bits = [formatSize(file.size), `登録 ${formatDate(entry.addedAt)}`];
+    const when = file.uploadedAt || entry.addedAt;
+    const bits = [
+      formatSize(file.size),
+      `${file.uploadedAt ? 'アップロード' : '登録'} ${formatDate(when)}`,
+    ];
+    if (file.note) bits.push(file.note);
     if (file.relPath !== file.name) bits.push(file.relPath);
     sub.textContent = bits.filter(Boolean).join(' ・ ');
     main.append(name, sub);
     row.appendChild(main);
+
+    // 同一サーバのファイルは素の <a download> が最も確実（JS も fetch も挟まない）
+    if (file.sameOrigin) {
+      const link = el('a', 'dl-btn');
+      link.href = file.downloadUrl;
+      link.setAttribute('download', file.name);
+      link.textContent = '⬇ ダウンロード';
+      link.title = `${file.name} をダウンロード`;
+      row.appendChild(link);
+      list.appendChild(row);
+      continue;
+    }
 
     const dl = el('button', 'dl-btn');
     dl.type = 'button';
@@ -869,6 +919,62 @@ function attachSwipe(card, inner, entry) {
 /* ============================================================
  * 読み込み・登録・削除
  * ========================================================== */
+
+/**
+ * data/files.json を読んで「ファイル置き場」エントリを組み立てる。
+ * ファイルはこのサイト自身が配っているので、GitHub の API も raw も使わない。
+ */
+async function loadStore() {
+  let data;
+  try {
+    const res = await fetch(`${FILES_URL}?v=${Date.now()}`, { cache: 'no-store' });
+    if (!res.ok) throw new Error(String(res.status));
+    data = await res.json();
+  } catch {
+    state.store = null;   // マニフェストが無ければ置き場は出さない
+    return;
+  }
+
+  const rows = Array.isArray(data) ? data : (data.files || []);
+  const files = rows
+    .filter((row) => row && row.path)
+    .map((row) => {
+      const name = row.name || String(row.path).split('/').pop();
+      return {
+        name,
+        path: row.path,
+        relPath: name,
+        size: typeof row.size === 'number' ? row.size : null,
+        uploadedAt: row.uploadedAt || row.addedAt || null,
+        note: row.note || '',
+        downloadUrl: `./${String(row.path).replace(/^\.?\//, '')}`,
+        sameOrigin: true,
+      };
+    });
+
+  if (!files.length) {
+    state.store = null;
+    return;
+  }
+
+  const newest = files
+    .map((f) => f.uploadedAt)
+    .filter(Boolean)
+    .sort()
+    .pop() || null;
+
+  state.store = {
+    id: STORE_ID,
+    label: data.label || 'ファイル置き場',
+    note: data.note || 'このサイトから直接ダウンロードできます',
+    addedAt: newest,
+    recursive: false,
+    source: 'store',
+    target: null,
+    storeFiles: files,
+  };
+  state.files.set(STORE_ID, { status: 'ready', ref: null, files, truncated: false });
+}
 
 async function loadRegistry() {
   const status = $('#registry-status');
@@ -1183,7 +1289,8 @@ async function downloadSelectedZip() {
  * ========================================================== */
 
 function currentRegistryJSON() {
-  const entries = visibleEntries().map((e) => ({
+  // ファイル置き場は registry.json ではなく files.json 側の管理なので外す
+  const entries = visibleEntries().filter((e) => e.target).map((e) => ({
     id: e.id.startsWith('local:') ? `seed:${targetKey(e.target)}` : e.id,
     label: e.label,
     path: `${e.target.owner}/${e.target.repo}${e.target.path ? `/${e.target.path}` : ''}`,
@@ -1225,11 +1332,13 @@ function wireUp() {
     }
   });
 
-  $('#btn-reload').addEventListener('click', () => {
+  $('#btn-reload').addEventListener('click', async () => {
     state.files.clear();
     defaultBranchCache.clear();
-    loadRegistry();
+    await loadStore();
+    await loadRegistry();
     for (const id of state.open) {
+      if (id === STORE_ID) continue;   // 置き場はマニフェスト読み込みで揃っている
       const entry = entryById(id);
       if (entry) loadEntryFiles(entry);
     }
@@ -1332,12 +1441,14 @@ function wireUp() {
   });
 }
 
-function init() {
+async function init() {
   loadLocal();
   wireUp();
   render();
-  loadRegistry();
   renderRateInfo();
+  await loadStore();
+  render();
+  await loadRegistry();
 }
 
 init();
