@@ -24,6 +24,19 @@ const el = (tag, cls) => {
   return node;
 };
 
+/**
+ * 要素が見つからなくても、そこで初期化全体を止めない。
+ * HTML と JS の版がずれたときに、ページごと無反応になるのを防ぐ。
+ */
+function on(selector, type, handler) {
+  const node = $(selector);
+  if (!node) {
+    console.warn(`${selector} が見つかりません`);
+    return;
+  }
+  node.addEventListener(type, handler);
+}
+
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
 /** currentColor で描く線画アイコン。ライト／ダークどちらでもボタン色に追従する */
@@ -110,7 +123,9 @@ function toast(message, kind = '', action = null) {
     node.appendChild(btn);
   }
 
-  $('#toasts').appendChild(node);
+  const host = $('#toasts');
+  if (!host) return node;
+  host.appendChild(node);
   setTimeout(() => node.remove(), action ? 7000 : 3500);
   return node;
 }
@@ -121,23 +136,34 @@ function toast(message, kind = '', action = null) {
 
 function render() {
   const list = $('#files');
+  if (!list) return;
+
   const files = visibleFiles();
 
+  // 一覧をいちばん先に描く。以降の付随要素が欠けていても、ここは残る。
   list.textContent = '';
   for (const file of files) list.appendChild(renderRow(file));
 
   renderEmptyState(files.length);
-  $('#bulk-bar').hidden = files.length === 0;
 
   // 消えたファイルの選択状態を掃除する
   const paths = new Set(files.map((f) => f.path));
   for (const p of [...state.selected]) if (!paths.has(p)) state.selected.delete(p);
 
+  const bar = $('#bulk-bar');
+  if (bar) bar.hidden = files.length === 0;
+
   const selectAll = $('#select-all');
-  selectAll.checked = files.length > 0 && state.selected.size === files.length;
-  selectAll.indeterminate = state.selected.size > 0 && state.selected.size < files.length;
-  $('#sel-count').textContent = state.selected.size ? `${state.selected.size} 件選択中` : '';
-  $('#btn-del-selected').disabled = state.selected.size === 0;
+  if (selectAll) {
+    selectAll.checked = files.length > 0 && state.selected.size === files.length;
+    selectAll.indeterminate = state.selected.size > 0 && state.selected.size < files.length;
+  }
+
+  const count = $('#sel-count');
+  if (count) count.textContent = state.selected.size ? `${state.selected.size} 件選択中` : '';
+
+  const delSelected = $('#btn-del-selected');
+  if (delSelected) delSelected.disabled = state.selected.size === 0;
 }
 
 /**
@@ -146,6 +172,7 @@ function render() {
  */
 function renderEmptyState(visibleCount) {
   const box = $('#empty-state');
+  if (!box) return;
   box.hidden = visibleCount > 0;
   if (visibleCount > 0) return;
 
@@ -363,7 +390,7 @@ async function loadSources() {
  * ========================================================== */
 
 function wireUp() {
-  $('#btn-settings').addEventListener('click', async () => {
+  on('#btn-settings', 'click', async () => {
     $('#sources').value = await loadSources() || '（取得元が読み込めませんでした）';
     $('#reset-state').textContent = state.removed.size
       ? `${state.removed.size} 件を非表示中`
@@ -371,19 +398,19 @@ function wireUp() {
     $('#settings-dialog').showModal();
   });
 
-  $('#select-all').addEventListener('change', (ev) => {
+  on('#select-all', 'change', (ev) => {
     state.selected = ev.target.checked ? new Set(visibleFiles().map((f) => f.path)) : new Set();
     render();
   });
 
-  $('#btn-del-selected').addEventListener('click', () => {
+  on('#btn-del-selected', 'click', () => {
     const paths = [...state.selected];
     if (!paths.length) return;
     if (!confirm(`選択した ${paths.length} 件を削除します。よろしいですか？`)) return;
     removeFiles(paths);
   });
 
-  $('#btn-copy-sources').addEventListener('click', async () => {
+  on('#btn-copy-sources', 'click', async () => {
     try {
       await navigator.clipboard.writeText($('#sources').value);
       toast('コピーしました');
@@ -393,7 +420,7 @@ function wireUp() {
     }
   });
 
-  $('#btn-reset').addEventListener('click', () => {
+  on('#btn-reset', 'click', () => {
     state.removed = new Set();
     persistRemoved();
     render();
