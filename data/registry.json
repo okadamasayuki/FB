@@ -18,5 +18,18 @@
       "addedAt": "2026-08-04T10:00:00+09:00"
     }
   },
-  "entries": []
+  "entries": [
+    {
+      "label": "Dify ワークフロー YAML",
+      "path": "okadamasayuki/plan_automation_dify/dify",
+      "addedAt": "2026-08-04T20:57:00+09:00",
+      "note": "Dify にインポートする workflow の YAML"
+    },
+    {
+      "label": "Dify プラグイン (.difypkg)",
+      "path": "okadamasayuki/plan_automation_dify/dist",
+      "addedAt": "2026-08-04T20:57:00+09:00",
+      "note": "Dify にインストールするプラグインパッケージ"
+    }
+  ]
 }
