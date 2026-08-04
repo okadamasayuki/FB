@@ -95,6 +95,31 @@ python3 -m http.server 8000
 
 ## デプロイ
 
-`main` / `master` / `claude/**` への push で `.github/workflows/pages.yml` が走り、リポジトリ全体が Pages に公開されます。
-初回は Actions の実行が必要です。ワークフローが権限不足で失敗する場合は、
-リポジトリの **Settings → Pages → Source** を **GitHub Actions** にしてから再実行してください。
+公開されるまでに、リポジトリ設定を 1 回だけ変更する必要があります（API では変更できない箇所です）。
+どちらか片方でかまいません。
+
+### A. ブランチから直接公開する（いちばん手軽）
+
+**Settings → Pages → Build and deployment**
+
+- Source: **Deploy from a branch**
+- Branch: **`claude/github-path-file-downloader-x0oo8c`** / **`/ (root)`** → Save
+
+1 分ほどで公開されます。GitHub Actions は不要です。
+
+### B. GitHub Actions で公開する
+
+**Settings → Pages → Build and deployment → Source: GitHub Actions**
+
+これで `github-pages` 環境が正しく作られ、`.github/workflows/pages.yml` が
+`main` / `master` / `claude/**` への push のたびにサイト全体を公開します。
+設定後は Actions タブから最新のワークフローを **Re-run** してください。
+
+> 設定前は、`build` ジョブ（Pages の有効化とアーティファクトのアップロード）は成功しますが、
+> `github-pages` 環境を参照する `deploy` ジョブが開始前に拒否されて失敗します。
+
+### 補足
+
+このリポジトリは `claude/github-path-file-downloader-x0oo8c` が現在のデフォルトブランチです。
+`main` に整理したい場合は Settings → Branches からリネームしてください
+（ワークフローは `main` への push にも対応しています）。
