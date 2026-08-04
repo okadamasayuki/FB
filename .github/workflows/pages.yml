@@ -19,15 +19,13 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  # Pages がまだ有効でないリポジトリでは、この build ジョブが先に有効化する。
+  # deploy ジョブは github-pages 環境を参照するため、有効化前だと起動できない。
+  build:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
 
-      # Pages が未設定のリポジトリでは、ここで有効化される
       - uses: actions/configure-pages@v5
         with:
           enablement: true
@@ -36,5 +34,12 @@ jobs:
         with:
           path: .
 
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - id: deployment
         uses: actions/deploy-pages@v4
