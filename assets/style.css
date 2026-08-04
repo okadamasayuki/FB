@@ -196,7 +196,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
 .dialog-head {
   display: flex;
   align-items: center;
-  padding: 14px 16px;
+  padding: 14px 16px 6px;
   position: sticky;
   top: 0;
   background: var(--surface);
@@ -204,6 +204,6 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
 
 .dialog-head h2 { margin: 0; font-size: 16px; flex: 1 1 auto; }
 
-.dialog-body { padding: 16px; display: grid; gap: 24px; overflow: auto; }
+.dialog-body { padding: 8px 16px 16px; display: grid; gap: 24px; overflow: auto; }
 .dialog-body h3 { margin: 0 0 6px; font-size: 14px; }
 .dialog-body section { display: grid; gap: 8px; }
