@@ -619,11 +619,13 @@ function renderEntry(entry) {
   /* --- 操作ボタン --- */
   const actions = el('div', 'entry-actions');
 
-  const zipBtn = el('button', 'small primary');
-  zipBtn.type = 'button';
-  zipBtn.textContent = '全部ZIPで保存';
-  zipBtn.addEventListener('click', () => downloadEntryZip(entry));
-  actions.appendChild(zipBtn);
+  // ファイルが 1 つだけなら ZIP にせず、そのまま落とす
+  const single = loaded?.status === 'ready' && loaded.files.length === 1;
+  const allBtn = el('button', 'small primary');
+  allBtn.type = 'button';
+  allBtn.textContent = single ? '⬇ ダウンロード' : '⬇ まとめてZIP保存';
+  allBtn.addEventListener('click', () => downloadEntryAll(entry));
+  actions.appendChild(allBtn);
 
   const refreshBtn = el('button', 'small');
   refreshBtn.type = 'button';
@@ -703,11 +705,13 @@ function renderFiles(entry) {
 
   const zipSel = el('button', 'small');
   zipSel.type = 'button';
-  zipSel.textContent = `選択した ${selected.size} 件をZIP`;
+  zipSel.textContent = selected.size === 1
+    ? '選択した 1 件をダウンロード'
+    : `選択した ${selected.size} 件をZIP`;
   zipSel.disabled = selected.size === 0;
   zipSel.addEventListener('click', () => {
     const picked = loaded.files.filter((f) => selected.has(f.relPath));
-    downloadZipOf(entry, picked);
+    downloadFiles(entry, picked);
   });
   bar.appendChild(zipSel);
 
@@ -750,18 +754,18 @@ function renderFiles(entry) {
     dl.type = 'button';
     dl.title = `${file.name} をダウンロード`;
     dl.setAttribute('aria-label', `${file.name} をダウンロード`);
-    dl.textContent = '⬇';
+    dl.textContent = '⬇ ダウンロード';
     dl.addEventListener('click', async () => {
       dl.disabled = true;
-      dl.textContent = '…';
+      dl.textContent = '取得中…';
       try {
         const bytes = await fetchFileBytes(entry, file);
         saveBlob(new Blob([bytes]), file.name);
         dl.classList.add('done');
-        dl.textContent = '✓';
-        setTimeout(() => { dl.classList.remove('done'); dl.textContent = '⬇'; }, 2500);
+        dl.textContent = '✓ 保存しました';
+        setTimeout(() => { dl.classList.remove('done'); dl.textContent = '⬇ ダウンロード'; }, 2500);
       } catch (err) {
-        dl.textContent = '⬇';
+        dl.textContent = '⬇ ダウンロード';
         toast(`${file.name}: ${err.message}`, 'error');
       } finally {
         dl.disabled = false;
@@ -1040,6 +1044,15 @@ async function fetchAll(jobs, onProgress) {
   return { files: results.filter(Boolean), errors };
 }
 
+/** 1 ファイルをそのまま保存する（busy ガードは呼び出し側で） */
+async function saveSingleFile(entry, file) {
+  showProgress(`${file.name} を取得中…`, 0, 1);
+  const bytes = await fetchFileBytes(entry, file);
+  showProgress(`${file.name} を取得中…`, 1, 1);
+  saveBlob(new Blob([bytes]), file.name);
+  toast(`${file.name} を保存しました`);
+}
+
 /** 取得して ZIP にまとめ、保存する（busy ガードは呼び出し側で） */
 async function zipAndSave(entry, files, zipLabel) {
   const jobs = uniqueZipNames(files).map((f) => ({ entry, file: f, zipName: f.zipName }));
@@ -1059,19 +1072,26 @@ async function zipAndSave(entry, files, zipLabel) {
     : `${fetched.length} 件をZIPにしました`, errors.length ? 'error' : '');
 }
 
-async function downloadZipOf(entry, files, zipLabel) {
+/** 1 件ならそのまま、複数なら ZIP でまとめて保存する */
+async function downloadFiles(entry, files, zipLabel) {
   if (!files.length) {
     toast('ダウンロードするファイルがありません', 'error');
     return;
   }
-  await withBusy(() => zipAndSave(entry, files, zipLabel));
+  await withBusy(() => (files.length === 1
+    ? saveSingleFile(entry, files[0])
+    : zipAndSave(entry, files, zipLabel)));
 }
 
-async function downloadEntryZip(entry) {
+async function downloadEntryAll(entry) {
   await withBusy(async () => {
     showProgress('ファイル一覧を取得中…', 0, 1);
     const loaded = await ensureFiles(entry);
     if (!loaded.files.length) throw new Error('このパスにファイルがありません');
+    if (loaded.files.length === 1) {
+      await saveSingleFile(entry, loaded.files[0]);
+      return;
+    }
     await zipAndSave(entry, loaded.files);
   });
 }
@@ -1100,6 +1120,12 @@ async function downloadSelectedZip() {
     }
 
     if (!jobs.length) throw new Error('ダウンロードできるファイルがありませんでした');
+
+    // 結局 1 ファイルなら ZIP にせずそのまま落とす
+    if (jobs.length === 1) {
+      await saveSingleFile(jobs[0].entry, jobs[0].file);
+      return;
+    }
 
     showProgress(`0 / ${jobs.length} 取得中…`, 0, jobs.length);
     const { files, errors } = await fetchAll(jobs, (done, total, name) => {
