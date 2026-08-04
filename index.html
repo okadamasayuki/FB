@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>GitHub パス ダウンローダー</title>
+<meta name="description" content="登録した GitHub のパスにあるファイルをワンクリックでダウンロードする、シンプルなツール。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%E2%AC%87%EF%B8%8F%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="./assets/style.css">
+</head>
+<body>
+
+<header class="app-bar">
+  <div class="brand">
+    <span class="logo" aria-hidden="true">⬇</span>
+    <div>
+      <h1>GitHub パス ダウンローダー</h1>
+      <p class="sub">登録したパスのファイルをワンクリックで</p>
+    </div>
+  </div>
+  <div class="bar-actions">
+    <button id="btn-reload" class="icon-btn" type="button" title="登録リストを再読み込み" aria-label="再読み込み">↻</button>
+    <button id="btn-settings" class="icon-btn" type="button" title="設定" aria-label="設定">⚙</button>
+  </div>
+</header>
+
+<main>
+  <section class="panel">
+    <details id="add-details">
+      <summary>パスを追加する</summary>
+      <form id="add-form" autocomplete="off">
+        <label class="field">
+          <span>GitHub のパス / URL</span>
+          <input id="add-path" type="text" required
+                 placeholder="owner/repo/docs/files または https://github.com/owner/repo/tree/main/docs">
+        </label>
+        <label class="field">
+          <span>表示名（任意）</span>
+          <input id="add-label" type="text" placeholder="例：請求書 2026">
+        </label>
+        <label class="check">
+          <input id="add-recursive" type="checkbox">
+          <span>サブフォルダの中も含める</span>
+        </label>
+        <button class="primary" type="submit">登録する</button>
+        <p class="hint">
+          ブランチを指定したいときは末尾に <code>#ブランチ名</code>（例 <code>owner/repo/docs#develop</code>）。
+          ここからの登録は<strong>この端末だけ</strong>に保存されます。全端末で共有したいときは Claude に
+          「このパス登録しといて」と伝えてください。
+        </p>
+      </form>
+    </details>
+  </section>
+
+  <section class="toolbar" id="bulk-bar" hidden>
+    <label class="check compact">
+      <input id="select-all" type="checkbox">
+      <span>全選択</span>
+    </label>
+    <span class="sel-count" id="sel-count">0 件選択中</span>
+    <span class="spacer"></span>
+    <button id="btn-zip-selected" class="small" type="button">選択をZIP</button>
+    <button id="btn-del-selected" class="small danger" type="button">選択を削除</button>
+    <button id="btn-del-all" class="small danger ghost" type="button">全削除</button>
+  </section>
+
+  <div id="entries" class="entries"></div>
+
+  <div id="empty-state" class="empty" hidden>
+    <p class="big">まだ何も登録されていません</p>
+    <p>上の「パスを追加する」から登録するか、Claude に<br><code>このパス登録しといて: https://github.com/owner/repo/tree/main/docs</code><br>と伝えてください。</p>
+  </div>
+
+  <p id="registry-status" class="registry-status"></p>
+</main>
+
+<footer class="foot">
+  <span>登録リスト: <code>data/registry.json</code></span>
+  <span id="rate-info"></span>
+</footer>
+
+<div id="toasts" class="toasts" aria-live="polite"></div>
+
+<div id="progress" class="progress" hidden>
+  <div class="progress-text" id="progress-text">準備中…</div>
+  <div class="progress-track"><div class="progress-bar" id="progress-bar"></div></div>
+</div>
+
+<dialog id="settings-dialog">
+  <form method="dialog" class="dialog-head">
+    <h2>設定</h2>
+    <button class="icon-btn" value="close" aria-label="閉じる">✕</button>
+  </form>
+
+  <div class="dialog-body">
+    <section>
+      <h3>GitHub トークン（任意）</h3>
+      <p class="hint">
+        非公開リポジトリを扱う場合や、API の回数制限（未設定だと 1 時間 60 回）を上げたい場合に設定します。
+        <strong>Contents: Read-only</strong> の fine-grained token を推奨。
+      </p>
+      <label class="field">
+        <span>Personal access token</span>
+        <input id="token-input" type="password" placeholder="github_pat_… / ghp_…" autocomplete="off">
+      </label>
+      <p class="warn">⚠ トークンはこのブラウザの localStorage にのみ保存されます（リポジトリには保存されません）。共用端末では使わないでください。</p>
+      <div class="row">
+        <button id="btn-save-token" class="primary small" type="button">保存</button>
+        <button id="btn-clear-token" class="small danger ghost" type="button">削除</button>
+        <span id="token-state" class="hint"></span>
+      </div>
+    </section>
+
+    <section>
+      <h3>登録データ</h3>
+      <p class="hint">この端末で追加・削除した内容を含めた、いまの登録リストです。これを Claude に渡すと <code>data/registry.json</code> に反映できます。</p>
+      <textarea id="export-area" rows="8" spellcheck="false"></textarea>
+      <div class="row">
+        <button id="btn-copy-export" class="small" type="button">コピー</button>
+        <button id="btn-import" class="small" type="button">上のJSONを取り込む</button>
+        <button id="btn-reset-local" class="small danger ghost" type="button">この端末の変更をリセット</button>
+      </div>
+    </section>
+  </div>
+</dialog>
+
+<script src="./assets/app.js"></script>
+</body>
+</html>
