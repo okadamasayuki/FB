@@ -284,20 +284,23 @@ async function listFiles(entry) {
 }
 
 async function fetchFileBytes(entry, file) {
-  const token = getToken();
-  // トークンがあれば API 経由（非公開リポジトリも読める）。無ければ raw を直接。
-  if (token || !file.downloadUrl) {
-    const ref = state.files.get(entry.id)?.ref || entry.target.ref || 'HEAD';
-    const res = await ghFetch(contentsUrl(entry.target, file.path, ref), 'application/vnd.github.raw');
-    return new Uint8Array(await res.arrayBuffer());
+  // download_url を最優先で使う。非公開リポジトリでも一時トークン付きで返るので
+  // これ 1 本で足りるうえ、API の raw メディアタイプはリダイレクト時に CORS で
+  // 落ちることがある。download_url が無いときだけ API にフォールバックする。
+  if (file.downloadUrl) {
+    let res;
+    try {
+      res = await fetch(file.downloadUrl);
+    } catch {
+      throw new Error('ネットワークに繋がりませんでした');
+    }
+    if (res.ok) return new Uint8Array(await res.arrayBuffer());
+    if (res.status !== 404) throw new Error(`ダウンロードに失敗しました（${res.status}）`);
+    // 404 のときは download_url の一時トークン切れの可能性があるので API を試す
   }
-  let res;
-  try {
-    res = await fetch(file.downloadUrl);
-  } catch {
-    throw new Error('ネットワークに繋がりませんでした');
-  }
-  if (!res.ok) throw new Error(`ダウンロードに失敗しました（${res.status}）`);
+
+  const ref = state.files.get(entry.id)?.ref || entry.target.ref || 'HEAD';
+  const res = await ghFetch(contentsUrl(entry.target, file.path, ref), 'application/vnd.github.raw');
   return new Uint8Array(await res.arrayBuffer());
 }
 
@@ -766,7 +769,10 @@ function renderFiles(entry) {
         setTimeout(() => { dl.classList.remove('done'); dl.textContent = '⬇ ダウンロード'; }, 2500);
       } catch (err) {
         dl.textContent = '⬇ ダウンロード';
-        toast(`${file.name}: ${err.message}`, 'error');
+        toast(`${file.name}: ${err.message}`, 'error', file.downloadUrl ? {
+          label: '直接開く',
+          onClick: () => window.open(file.downloadUrl, '_blank', 'noopener'),
+        } : null);
       } finally {
         dl.disabled = false;
       }
