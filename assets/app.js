@@ -24,6 +24,31 @@ const el = (tag, cls) => {
   return node;
 };
 
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+/** currentColor で描く線画アイコン。ライト／ダークどちらでもボタン色に追従する */
+function icon(paths) {
+  const svg = document.createElementNS(SVG_NS, 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('width', '19');
+  svg.setAttribute('height', '19');
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor');
+  svg.setAttribute('stroke-width', '2');
+  svg.setAttribute('stroke-linecap', 'round');
+  svg.setAttribute('stroke-linejoin', 'round');
+  svg.setAttribute('aria-hidden', 'true');
+  for (const d of paths) {
+    const path = document.createElementNS(SVG_NS, 'path');
+    path.setAttribute('d', d);
+    svg.appendChild(path);
+  }
+  return svg;
+}
+
+const ICON_DOWNLOAD = ['M12 3v12', 'M7 10l5 5 5-5', 'M4 19h16'];
+const ICON_TRASH = ['M4 7h16', 'M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2', 'M18 7l-.8 12a2 2 0 0 1-2 1.9H8.8a2 2 0 0 1-2-1.9L6 7', 'M10 11.5v5', 'M14 11.5v5'];
+
 function readJSON(key, fallback) {
   try {
     const raw = localStorage.getItem(key);
@@ -154,13 +179,16 @@ function renderRow(file) {
   const link = el('a', 'dl-btn');
   link.href = file.downloadUrl;
   link.setAttribute('download', file.name);
-  link.textContent = 'ダウンロード';
+  link.title = `${file.name} をダウンロード`;
+  link.setAttribute('aria-label', `${file.name} をダウンロード`);
+  link.appendChild(icon(ICON_DOWNLOAD));
   actions.appendChild(link);
 
   const del = el('button', 'del-btn');
   del.type = 'button';
-  del.textContent = '削除';
   del.title = `${file.name} を削除`;
+  del.setAttribute('aria-label', `${file.name} を削除`);
+  del.appendChild(icon(ICON_TRASH));
   del.addEventListener('click', () => removeFiles([file.path]));
   actions.appendChild(del);
 
@@ -303,11 +331,6 @@ async function loadSources() {
  * ========================================================== */
 
 function wireUp() {
-  $('#btn-reload').addEventListener('click', async () => {
-    await loadFiles();
-    toast('再読み込みしました');
-  });
-
   $('#btn-settings').addEventListener('click', async () => {
     $('#sources').value = await loadSources() || '（取得元が読み込めませんでした）';
     $('#reset-state').textContent = state.removed.size

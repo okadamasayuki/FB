@@ -227,42 +227,32 @@ textarea:focus-visible, button:focus-visible, a:focus-visible, input:focus-visib
   margin-top: 1px;
 }
 
-.dl-btn {
+.dl-btn, .del-btn {
   flex: none;
-  display: inline-flex;
-  align-items: center;
-  padding: 7px 13px;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
   border: 1px solid transparent;
-  border-radius: 9px;
+  text-decoration: none;
+}
+
+.dl-btn {
   background: var(--accent);
   color: var(--accent-text);
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.5;
-  white-space: nowrap;
-  text-decoration: none;
 }
 
 .dl-btn:hover { filter: brightness(1.06); }
 
 .del-btn {
-  flex: none;
-  padding: 7px 11px;
-  font-size: 13px;
-  color: var(--danger);
-  border-color: color-mix(in srgb, var(--danger) 35%, var(--border));
   background: transparent;
-  white-space: nowrap;
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 30%, var(--border));
 }
 
-/* 狭い画面ではファイル名に幅を譲り、ボタンを次の行に落とす */
-@media (max-width: 520px) {
-  .file-inner { flex-wrap: wrap; row-gap: 10px; }
-  /* チェックボックスぶん（17px + gap 11px）を引かないと右にはみ出す */
-  .file-actions { flex: 1 0 calc(100% - 28px); margin-left: 28px; }
-  .file-actions .dl-btn,
-  .file-actions .del-btn { flex: 1 1 auto; justify-content: center; text-align: center; }
-}
+.del-btn:hover { background: color-mix(in srgb, var(--danger) 10%, transparent); }
 
 /* ---------- 空 / ステータス ---------- */
 .empty {
