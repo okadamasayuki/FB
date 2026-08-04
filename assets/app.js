@@ -283,25 +283,54 @@ async function listFiles(entry) {
   return { ref, files, truncated };
 }
 
-async function fetchFileBytes(entry, file) {
-  // download_url を最優先で使う。非公開リポジトリでも一時トークン付きで返るので
-  // これ 1 本で足りるうえ、API の raw メディアタイプはリダイレクト時に CORS で
-  // 落ちることがある。download_url が無いときだけ API にフォールバックする。
-  if (file.downloadUrl) {
-    let res;
-    try {
-      res = await fetch(file.downloadUrl);
-    } catch {
-      throw new Error('ネットワークに繋がりませんでした');
-    }
-    if (res.ok) return new Uint8Array(await res.arrayBuffer());
-    if (res.status !== 404) throw new Error(`ダウンロードに失敗しました（${res.status}）`);
-    // 404 のときは download_url の一時トークン切れの可能性があるので API を試す
-  }
+// 社内プロキシなどで raw.githubusercontent.com が塞がれている環境では、
+// 一度失敗したら以降は毎回待たされないように API 経由へ切り替える。
+let rawUnavailable = false;
 
+function base64ToBytes(base64) {
+  const binary = atob(String(base64).replace(/\s/g, ''));
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+/**
+ * API 経由でファイルの中身を取る。
+ * contents API は 1MB までなら base64 を JSON に直接入れて返すので、
+ * 別ホストへのリダイレクトが起きない＝一覧が取れる環境なら必ず取れる。
+ * 1MB を超えると content が空になるので、その場合だけ Blobs API を使う。
+ */
+async function fetchViaApi(entry, file) {
   const ref = state.files.get(entry.id)?.ref || entry.target.ref || 'HEAD';
-  const res = await ghFetch(contentsUrl(entry.target, file.path, ref), 'application/vnd.github.raw');
-  return new Uint8Array(await res.arrayBuffer());
+  const res = await ghFetch(contentsUrl(entry.target, file.path, ref));
+  const body = await res.json();
+  if (body.encoding === 'base64' && body.content) return base64ToBytes(body.content);
+
+  const sha = body.sha || file.sha;
+  if (!sha) throw new Error('ファイルの中身を取得できませんでした');
+  const { owner, repo } = entry.target;
+  const blobRes = await ghFetch(
+    `${API_ROOT}/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/blobs/${sha}`,
+  );
+  const blob = await blobRes.json();
+  if (blob.encoding !== 'base64' || !blob.content) {
+    throw new Error('ファイルの中身を取得できませんでした');
+  }
+  return base64ToBytes(blob.content);
+}
+
+async function fetchFileBytes(entry, file) {
+  // まず raw を試す（速く、API の回数制限も使わない）。
+  // 落ちたら理由を問わず API 経由へ回すので、ここで諦めない。
+  if (file.downloadUrl && !rawUnavailable) {
+    try {
+      const res = await fetch(file.downloadUrl);
+      if (res.ok) return new Uint8Array(await res.arrayBuffer());
+    } catch {
+      rawUnavailable = true;
+    }
+  }
+  return fetchViaApi(entry, file);
 }
 
 function saveBlob(blob, filename) {
