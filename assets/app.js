@@ -68,6 +68,7 @@ function writeJSON(key, value) {
 
 const dateFmt = new Intl.DateTimeFormat('ja-JP', {
   year: 'numeric', month: '2-digit', day: '2-digit',
+  hour: '2-digit', minute: '2-digit',
 });
 
 function formatDate(iso) {
@@ -348,13 +349,6 @@ function wireUp() {
     const paths = [...state.selected];
     if (!paths.length) return;
     if (!confirm(`選択した ${paths.length} 件を削除します。よろしいですか？`)) return;
-    removeFiles(paths);
-  });
-
-  $('#btn-del-all').addEventListener('click', () => {
-    const paths = visibleFiles().map((f) => f.path);
-    if (!paths.length) return;
-    if (!confirm(`${paths.length} 件すべてを削除します。よろしいですか？`)) return;
     removeFiles(paths);
   });
 
