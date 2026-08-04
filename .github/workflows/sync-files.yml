@@ -1,0 +1,48 @@
+name: Sync files from source repos
+
+on:
+  schedule:
+    # 毎時 15 分に元リポジトリを見に行く（UTC 指定だが毎時なので時差は無関係）
+    - cron: '15 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: sync-files
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      changed: ${{ steps.sync.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: sync
+        run: node scripts/sync-files.mjs
+        env:
+          # 公開リポジトリなら未設定でよい。元リポジトリが非公開になったら
+          # Contents:Read の PAT を SYNC_TOKEN シークレットに入れる。
+          SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
+
+      - name: Commit
+        if: steps.sync.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add files data/files.json
+          git commit -m "Sync files from source repositories"
+          git push
+
+  # Actions が push したコミットでは pages.yml の push トリガーが発火しないので、
+  # ここから明示的に呼んで公開まで済ませる。
+  deploy:
+    needs: sync
+    if: needs.sync.outputs.changed == 'true'
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/pages.yml

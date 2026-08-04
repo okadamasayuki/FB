@@ -7,6 +7,9 @@ on:
       - master
       - 'claude/**'
   workflow_dispatch:
+  # sync-files.yml から呼び出す。Actions が push したコミットでは
+  # 上の push トリガーが発火しないため。
+  workflow_call:
 
 permissions:
   contents: read

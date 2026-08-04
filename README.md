@@ -47,8 +47,29 @@
 | `uploadedAt` | | ここに置いた日時（ISO 8601） |
 | `note` | | 一覧に出るひとことメモ |
 
-置いたファイルは**その時点のコピー**です。元のリポジトリを更新しても自動では追随しないので、
-更新したいときは Claude に「置き場のファイル更新しといて」と伝えてください。
+#### 元リポジトリからの自動同期
+
+`data/sync.json` に書いた元リポジトリを **1 時間おきに見に行き、変わっていればコピーし直して公開まで自動で行います**（`.github/workflows/sync-files.yml`）。すぐ反映したいときは Actions タブから *Sync files from source repos* を手動実行してください。
+
+```json
+{
+  "sources": [
+    {
+      "repo": "okadamasayuki/plan_automation_dify",
+      "ref": "",
+      "files": [
+        { "from": "dify/plan_automation_workflow.yml", "to": "files/plan_automation_workflow.yml", "note": "Dify ワークフロー YAML" }
+      ]
+    }
+  ]
+}
+```
+
+- `ref` を空にすると、元リポジトリのデフォルトブランチを自動で解決します（ブランチ名を変えても追随します）
+- 中身が変わっていないファイルは書き換えず、`uploadedAt` も据え置きます
+- `data/files.json` に手で足したエントリは消しません
+- Actions が push したコミットでは通常の push トリガーが発火しないため、同期ジョブから `pages.yml` を直接呼んで公開しています
+- 元リポジトリを**非公開に戻した**場合は、Contents: Read-only の PAT を `SYNC_TOKEN` シークレットに登録してください（公開のままなら不要）
 
 ### 2. GitHub のパスを参照する（`data/registry.json`）
 

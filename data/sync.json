@@ -1,0 +1,28 @@
+{
+  "_help": {
+    "説明": "元リポジトリから files/ へ自動コピーする対象です。.github/workflows/sync-files.yml が定期的に見に行きます。",
+    "sources[].repo": "owner/repo",
+    "sources[].ref": "省略または空ならデフォルトブランチを自動で解決します",
+    "sources[].files[].from": "元リポジトリ内のパス",
+    "sources[].files[].to": "このリポジトリ内の置き先（files/ 配下）",
+    "sources[].files[].note": "サイトの一覧に出るひとことメモ"
+  },
+  "sources": [
+    {
+      "repo": "okadamasayuki/plan_automation_dify",
+      "ref": "",
+      "files": [
+        {
+          "from": "dify/plan_automation_workflow.yml",
+          "to": "files/plan_automation_workflow.yml",
+          "note": "Dify ワークフロー YAML"
+        },
+        {
+          "from": "dist/plan_automation.difypkg",
+          "to": "files/plan_automation.difypkg",
+          "note": "Dify プラグイン"
+        }
+      ]
+    }
+  ]
+}
