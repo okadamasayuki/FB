@@ -8,7 +8,7 @@
 <title>FB</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%238a9199'/%3E%3C/svg%3E">
 <!-- ?v= はキャッシュ避け。assets/ を変えたら必ず上げる（古い CSS と新しい JS が混ざるのを防ぐ） -->
-<link rel="stylesheet" href="./assets/style.css?v=5">
+<link rel="stylesheet" href="./assets/style.css?v=6">
 </head>
 <body>
 
@@ -20,19 +20,8 @@
 </header>
 
 <main>
-  <section class="toolbar" id="bulk-bar" hidden>
-    <label class="check compact">
-      <input id="select-all" type="checkbox">
-      <span>全選択</span>
-    </label>
-    <span class="sel-count" id="sel-count"></span>
-    <span class="spacer"></span>
-    <button id="btn-del-selected" class="small danger" type="button">選択を削除</button>
-  </section>
-
   <div id="files" class="file-list"></div>
-
-  <div id="empty-state" class="empty" hidden></div>
+  <p id="empty-state" class="empty" hidden>ファイルがありません</p>
   <p id="load-status" class="load-status"></p>
 </main>
 
@@ -52,20 +41,11 @@
       <div class="row">
         <button id="btn-copy-sources" class="small" type="button">コピー</button>
       </div>
-      <p class="hint">増やしたいときは <code>owner/repo/フォルダ/ファイル名</code> を伝えてください。以降は自動で取りに行きます。</p>
-    </section>
-
-    <section>
-      <h3>表示</h3>
-      <p class="hint">削除したものはこの端末で見えなくなるだけです。元に戻すとすべて表示されます。</p>
-      <div class="row">
-        <button id="btn-reset" class="small" type="button">削除したものを元に戻す</button>
-        <span id="reset-state" class="hint"></span>
-      </div>
+      <p class="hint">増やすときは <code>owner/repo/フォルダ/ファイル名</code> を、減らすときはファイル名を伝えてください。</p>
     </section>
   </div>
 </dialog>
 
-<script src="./assets/app.js?v=5"></script>
+<script src="./assets/app.js?v=6"></script>
 </body>
 </html>

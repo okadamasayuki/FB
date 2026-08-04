@@ -117,7 +117,21 @@ async function main() {
     }
   }
 
-  manifest.files = entries;
+  // sync.json から外されたファイルは一覧からも消す（実体は別途削除する）
+  const managed = new Set(
+    (config.sources || []).flatMap((s) => (s.files || []).map((f) => f.to)),
+  );
+  const kept = entries.filter((e) => {
+    if (managed.has(e.path)) return true;
+    if (!existsSync(path.join(ROOT, e.path))) {
+      console.log(`  一覧から除外 ${e.path}（実体なし）`);
+      changed = true;
+      return false;
+    }
+    return true;   // 手で置いたファイルは残す
+  });
+
+  manifest.files = kept;
   await writeFile(FILES_MANIFEST, `${JSON.stringify(manifest, null, 2)}\n`);
 
   for (const w of warnings) console.warn(`警告: ${w}`);
