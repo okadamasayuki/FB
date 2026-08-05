@@ -1,0 +1,161 @@
+app:
+  description: >-
+    ワークフローの環境変数 PYTHON_CODE に貼り付けた Python プログラムを、
+    チャットに添付したファイルを入力として実行します(Jupyter Lab の代替)。
+    必要なファイルが足りないときは「添付してください」と聞き返します。
+    実行後は Jupyter 風のレポートと出力ファイルをダウンロードできます。
+  icon: 🐍
+  icon_background: '#FEF3C7'
+  mode: advanced-chat
+  name: Python 実行(Jupyter 代替)
+  use_icon_as_answer_icon: false
+kind: app
+version: 0.1.5
+workflow:
+  conversation_variables: []
+  environment_variables:
+    - description: >-
+        実行する Python プログラムをここに丸ごと貼り付ける。コードはプラグイン内で
+        のみ実行され、外部には送信されない。先頭に「# 入力ファイル: ○○.xlsx」と
+        書くと、添付が足りないときにチャットで聞き返すようになる。
+      name: PYTHON_CODE
+      selector:
+        - env
+        - PYTHON_CODE
+      value: ''
+      value_type: string
+  features:
+    file_upload:
+      allowed_file_extensions:
+        - .xlsx
+        - .xlsm
+        - .csv
+        - .txt
+        - .json
+      allowed_file_types:
+        - custom
+      allowed_file_upload_methods:
+        - local_file
+      enabled: true
+      number_limits: 10
+    opening_statement: >-
+      Python プログラムを実行します。入力ファイルを添付して送信してください。
+      (どのファイルが必要かは、何も付けずに送信すると教えます)
+    retriever_resource:
+      enabled: false
+    sensitive_word_avoidance:
+      enabled: false
+    speech_to_text:
+      enabled: false
+    suggested_questions: []
+    suggested_questions_after_answer:
+      enabled: false
+    text_to_speech:
+      enabled: false
+      language: ''
+      voice: ''
+  graph:
+    edges:
+      - data:
+          isInIteration: false
+          sourceType: start
+          targetType: tool
+        id: start-source-tool-target
+        source: start
+        sourceHandle: source
+        target: tool
+        targetHandle: target
+        type: custom
+        zIndex: 0
+      - data:
+          isInIteration: false
+          sourceType: tool
+          targetType: answer
+        id: tool-source-answer-target
+        source: tool
+        sourceHandle: source
+        target: answer
+        targetHandle: target
+        type: custom
+        zIndex: 0
+    nodes:
+      - data:
+          desc: ''
+          selected: false
+          title: 開始
+          type: start
+          variables: []
+        height: 54
+        id: start
+        position:
+          x: 80
+          y: 282
+        positionAbsolute:
+          x: 80
+          y: 282
+        selected: false
+        sourcePosition: right
+        targetPosition: left
+        type: custom
+        width: 244
+      - data:
+          desc: PYTHON_CODE のプログラムを、添付ファイルを入力として実行(python_runner プラグイン)
+          is_team_authorization: false
+          provider_id: okadamasayuki/python_runner/python_runner
+          provider_name: okadamasayuki/python_runner/python_runner
+          provider_type: builtin
+          selected: false
+          title: Python を実行
+          tool_configurations: {}
+          tool_label: Python を実行
+          tool_name: run_python
+          tool_parameters:
+            code:
+              type: mixed
+              value: '{{#env.PYTHON_CODE#}}'
+            files:
+              type: variable
+              value:
+                - sys
+                - files
+            user_text:
+              type: mixed
+              value: '{{#sys.query#}}'
+          type: tool
+        height: 168
+        id: tool
+        position:
+          x: 420
+          y: 282
+        positionAbsolute:
+          x: 420
+          y: 282
+        selected: false
+        sourcePosition: right
+        targetPosition: left
+        type: custom
+        width: 244
+      - data:
+          answer: '{{#tool.text#}}'
+          desc: ''
+          selected: false
+          title: 回答
+          type: answer
+          variables: []
+        height: 102
+        id: answer
+        position:
+          x: 760
+          y: 282
+        positionAbsolute:
+          x: 760
+          y: 282
+        selected: false
+        sourcePosition: right
+        targetPosition: left
+        type: custom
+        width: 244
+    viewport:
+      x: 0
+      y: 0
+      zoom: 1

@@ -131,6 +131,14 @@ async function main() {
     return true;   // 手で置いたファイルは残す
   });
 
+  // 一覧の並びは sync.json の順に揃える。サイトはこの順で表示するので、
+  // 読ませたい順を設定ファイル側で決められるようにしておく。
+  const order = new Map([...managed].map((p, i) => [p, i]));
+  const before = kept.map((e) => e.path).join('\n');
+  kept.sort((a, b) => (order.get(a.path) ?? Number.MAX_SAFE_INTEGER)
+    - (order.get(b.path) ?? Number.MAX_SAFE_INTEGER));
+  if (kept.map((e) => e.path).join('\n') !== before) changed = true;
+
   manifest.files = kept;
   await writeFile(FILES_MANIFEST, `${JSON.stringify(manifest, null, 2)}\n`);
 

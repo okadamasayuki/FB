@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>社内 Dify 導入ガイド — 資金計画自動生成 / Python 実行</title>
+</head>
+<body>
+<style>
+  :root {
+    --ground: #FCFCFD;
+    --surface: #FFFFFF;
+    --surface-2: #F5F7FA;
+    --rule: #E4E7EE;
+    --rule-strong: #CDD3DF;
+    --ink: #171B24;
+    --muted: #5C6579;
+    --accent: #1B5FA8;
+    --accent-soft: #EAF1F9;
+    --ok: #0F7B4F;
+    --ok-soft: #E8F5EE;
+    --warn: #9A6410;
+    --warn-soft: #FBF2E2;
+    --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN",
+            "Noto Sans JP", "Yu Gothic Medium", "Yu Gothic", Meiryo, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #12151C; --surface: #181C25; --surface-2: #1E232E;
+      --rule: #2A303C; --rule-strong: #3A4252;
+      --ink: #E9ECF2; --muted: #98A1B3;
+      --accent: #7FB3E8; --accent-soft: #1B2634;
+      --ok: #52C793; --ok-soft: #14261E;
+      --warn: #E0A458; --warn-soft: #2A2116;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #12151C; --surface: #181C25; --surface-2: #1E232E;
+    --rule: #2A303C; --rule-strong: #3A4252;
+    --ink: #E9ECF2; --muted: #98A1B3;
+    --accent: #7FB3E8; --accent-soft: #1B2634;
+    --ok: #52C793; --ok-soft: #14261E;
+    --warn: #E0A458; --warn-soft: #2A2116;
+  }
+  :root[data-theme="light"] {
+    --ground: #FCFCFD; --surface: #FFFFFF; --surface-2: #F5F7FA;
+    --rule: #E4E7EE; --rule-strong: #CDD3DF;
+    --ink: #171B24; --muted: #5C6579;
+    --accent: #1B5FA8; --accent-soft: #EAF1F9;
+    --ok: #0F7B4F; --ok-soft: #E8F5EE;
+    --warn: #9A6410; --warn-soft: #FBF2E2;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--ground); color: var(--ink);
+    font-family: var(--sans); font-size: 15px; line-height: 1.85;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 1180px; margin: 0 auto; padding: 0 24px 96px; }
+
+  /* ---- ヘッダー ---- */
+  header.doc {
+    padding: 52px 0 30px; border-bottom: 2px solid var(--ink); margin-bottom: 40px;
+  }
+  .eyebrow {
+    font-size: 11.5px; letter-spacing: .16em; color: var(--muted);
+    font-weight: 700; margin-bottom: 14px;
+  }
+  h1 {
+    font-size: clamp(26px, 3.6vw, 38px); line-height: 1.3; margin: 0 0 14px;
+    font-weight: 700; letter-spacing: -.01em; text-wrap: balance;
+  }
+  .lede { font-size: 16px; color: var(--muted); max-width: 62ch; margin: 0; }
+  .meta {
+    display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 22px;
+    font-size: 12.5px; color: var(--muted); font-family: var(--mono);
+  }
+
+  /* ---- レイアウト ---- */
+  .shell { display: grid; grid-template-columns: 196px minmax(0, 1fr); gap: 56px; }
+  nav.toc { position: sticky; top: 26px; align-self: start; }
+  nav.toc p {
+    font-size: 11px; letter-spacing: .14em; color: var(--muted);
+    font-weight: 700; margin: 0 0 12px;
+  }
+  nav.toc a {
+    display: block; padding: 6px 0 6px 13px; font-size: 13.5px;
+    color: var(--muted); text-decoration: none;
+    border-left: 2px solid var(--rule); line-height: 1.45;
+  }
+  nav.toc a:hover, nav.toc a:focus-visible {
+    color: var(--accent); border-left-color: var(--accent);
+  }
+  nav.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  section { margin-bottom: 68px; scroll-margin-top: 24px; }
+  h2 {
+    font-size: 21px; font-weight: 700; margin: 0 0 6px;
+    letter-spacing: -.005em; text-wrap: balance;
+  }
+  h2 + .sub { color: var(--muted); font-size: 14px; margin: 0 0 26px; max-width: 62ch; }
+  h3 {
+    font-size: 15.5px; font-weight: 700; margin: 34px 0 12px;
+    padding-bottom: 7px; border-bottom: 1px solid var(--rule);
+  }
+  p { max-width: 66ch; }
+
+  /* ---- ファイル対応カード ---- */
+  .files { display: grid; gap: 14px; }
+  .filecard {
+    display: grid; grid-template-columns: auto minmax(0,1fr) auto;
+    gap: 18px; align-items: center;
+    background: var(--surface); border: 1px solid var(--rule);
+    border-radius: 4px; padding: 16px 20px;
+  }
+  .ext {
+    font-family: var(--mono); font-size: 11px; font-weight: 700;
+    letter-spacing: .04em; padding: 7px 11px; border-radius: 3px;
+    background: var(--accent-soft); color: var(--accent); white-space: nowrap;
+  }
+  .ext.yml { background: var(--surface-2); color: var(--muted); }
+  .fname { font-family: var(--mono); font-size: 13.5px; font-weight: 600; word-break: break-all; }
+  .fwhat { font-size: 13px; color: var(--muted); margin-top: 3px; }
+  .fdest {
+    font-size: 12.5px; text-align: right; color: var(--ink);
+    border-left: 1px solid var(--rule); padding-left: 18px; min-width: 168px;
+  }
+  .fdest b { display: block; font-size: 11px; color: var(--muted); font-weight: 700; letter-spacing: .08em; }
+  @media (max-width: 720px) {
+    .filecard { grid-template-columns: auto minmax(0,1fr); }
+    .fdest { grid-column: 1 / -1; text-align: left; border-left: 0; padding-left: 0;
+             border-top: 1px solid var(--rule); padding-top: 10px; min-width: 0; }
+  }
+
+  /* ---- 表 ---- */
+  .tablewrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: 4px; }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; min-width: 520px; }
+  th, td { text-align: left; padding: 11px 16px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  thead th {
+    background: var(--surface-2); font-size: 11.5px; letter-spacing: .07em;
+    color: var(--muted); font-weight: 700; white-space: nowrap;
+  }
+  tbody tr:last-child td { border-bottom: 0; }
+  td.check { font-family: var(--mono); font-size: 12.5px; white-space: nowrap; }
+
+  .verdict { font-weight: 700; font-size: 12.5px; white-space: nowrap; }
+  .verdict.ok { color: var(--ok); }
+  .verdict.note { color: var(--warn); }
+
+  /* ---- 注意ブロック ---- */
+  .callout {
+    border: 1px solid var(--rule); border-left: 3px solid var(--warn);
+    background: var(--warn-soft); border-radius: 4px; padding: 18px 22px; margin: 24px 0;
+  }
+  .callout.plain { border-left-color: var(--accent); background: var(--accent-soft); }
+  .callout h4 {
+    margin: 0 0 8px; font-size: 14px; font-weight: 700;
+  }
+  .callout p { margin: 0 0 10px; font-size: 13.5px; }
+  .callout p:last-child { margin-bottom: 0; }
+
+  /* ---- コード ---- */
+  pre {
+    font-family: var(--mono); font-size: 12.5px; line-height: 1.75;
+    background: var(--surface-2); border: 1px solid var(--rule); border-radius: 4px;
+    padding: 15px 18px; overflow-x: auto; margin: 14px 0;
+    color: var(--ink);
+  }
+  pre .c { color: var(--muted); }
+  code {
+    font-family: var(--mono); font-size: .9em;
+    background: var(--surface-2); border: 1px solid var(--rule);
+    border-radius: 3px; padding: 1px 5px;
+  }
+  .hash { font-family: var(--mono); font-size: 11.5px; word-break: break-all; color: var(--muted); }
+
+  /* ---- 手順 ---- */
+  ol.steps { list-style: none; counter-reset: s; padding: 0; margin: 0; display: grid; gap: 20px; }
+  ol.steps > li {
+    counter-increment: s; display: grid; grid-template-columns: 34px minmax(0,1fr);
+    gap: 18px; align-items: start;
+  }
+  ol.steps > li::before {
+    content: counter(s); font-family: var(--mono); font-size: 13px; font-weight: 700;
+    color: var(--accent); background: var(--accent-soft);
+    width: 34px; height: 34px; display: grid; place-items: center;
+    border-radius: 50%; margin-top: 2px;
+  }
+  ol.steps h4 { margin: 4px 0 6px; font-size: 15px; font-weight: 700; }
+  ol.steps p { margin: 0 0 8px; font-size: 14px; }
+  .stepbody > *:last-child { margin-bottom: 0; }
+  .path {
+    font-family: var(--mono); font-size: 12.5px; background: var(--surface-2);
+    border: 1px solid var(--rule); border-radius: 3px; padding: 9px 13px;
+    display: inline-block; margin: 4px 0 8px;
+  }
+  .only {
+    display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .05em;
+    color: var(--warn); background: var(--warn-soft); border: 1px solid var(--rule);
+    border-radius: 3px; padding: 2px 8px; margin-left: 8px; vertical-align: 2px;
+  }
+
+  /* ---- 全体像 ---- */
+  .flow { display: grid; gap: 10px; margin: 22px 0; }
+  .frow {
+    display: grid; grid-template-columns: 150px minmax(0,1fr); gap: 20px;
+    align-items: center; background: var(--surface);
+    border: 1px solid var(--rule); border-radius: 4px; padding: 14px 20px;
+  }
+  .frow .who {
+    font-size: 12px; font-weight: 700; color: var(--accent);
+    letter-spacing: .04em; border-right: 1px solid var(--rule); padding-right: 20px;
+  }
+  .frow .what { font-size: 13.5px; }
+  .frow .what span { color: var(--muted); }
+  .arrowdown { text-align: center; color: var(--rule-strong); font-size: 15px; line-height: 1; }
+  @media (max-width: 640px) {
+    .frow { grid-template-columns: minmax(0,1fr); gap: 8px; }
+    .frow .who { border-right: 0; padding-right: 0; }
+  }
+
+  ul.tight { padding-left: 20px; margin: 10px 0; }
+  ul.tight li { margin-bottom: 7px; font-size: 14px; }
+  ul.tight li:last-child { margin-bottom: 0; }
+
+  @media (max-width: 900px) {
+    .shell { grid-template-columns: minmax(0,1fr); gap: 0; }
+    nav.toc { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  }
+  html { scroll-behavior: smooth; }
+</style>
+
+<div class="page">
+
+<header class="doc">
+  <div class="eyebrow">社内 Dify 導入ガイド</div>
+  <h1>資金計画自動生成 と Python 実行環境を<br>社内 Dify に入れる</h1>
+  <p class="lede">
+    持ち込むファイルは 3 つ。中身は何か、なぜ持ち込んで問題ないと言えるのか、
+    どの順番で入れるのか——導入担当と情報システム部門の双方が確認できる形でまとめています。
+  </p>
+  <div class="meta">
+    <span>plan_automation v0.0.1</span>
+    <span>2026-08-05</span>
+    <span>Python 2,220 行 / YAML 232 行</span>
+  </div>
+</header>
+
+<div class="shell">
+  <nav class="toc">
+    <p>目次</p>
+    <a href="#files">1. どのファイルが何か</a>
+    <a href="#security">2. 安全性の根拠</a>
+    <a href="#exec">3. exec の説明</a>
+    <a href="#verify">4. 自分で検証する</a>
+    <a href="#setup">5. 導入手順</a>
+    <a href="#flow">6. 完成後の姿</a>
+    <a href="#caveat">7. 事前に確認すること</a>
+  </nav>
+
+  <main>
+
+  <!-- ============ 1 ============ -->
+  <section id="files">
+    <h2>1. どのファイルが何か</h2>
+    <p class="sub">
+      拡張子は 2 種類。<b>.difypkg が 1 つ（プラグイン＝処理する部品）</b>、
+      <b>.yml が 2 つ（アプリ＝画面と流れ）</b>です。入れ方がそれぞれ違います。
+    </p>
+
+    <div class="files">
+      <div class="filecard">
+        <span class="ext">.difypkg</span>
+        <div>
+          <div class="fname">plan_automation.difypkg</div>
+          <div class="fwhat">プラグイン本体。Excel を読み書きし、貼り付けた Python を実行する部品。<b>最初に 1 回だけ</b>入れれば、下の 2 つのアプリ両方から使われます。</div>
+        </div>
+        <div class="fdest"><b>入れる場所</b>プラグイン画面から<br>インストール</div>
+      </div>
+
+      <div class="filecard">
+        <span class="ext yml">.yml</span>
+        <div>
+          <div class="fname">plan_automation_workflow.yml</div>
+          <div class="fwhat">資金計画アプリ。元データ Excel と手順書を入力するフォーム画面と、実行の流れ。</div>
+        </div>
+        <div class="fdest"><b>入れる場所</b>スタジオから<br>DSL インポート</div>
+      </div>
+
+      <div class="filecard">
+        <span class="ext yml">.yml</span>
+        <div>
+          <div class="fname">python_runner_chatflow.yml</div>
+          <div class="fwhat">Python 実行アプリ（Jupyter Lab の代替）。ファイルを添付して送るチャット画面。</div>
+        </div>
+        <div class="fdest"><b>入れる場所</b>スタジオから<br>DSL インポート</div>
+      </div>
+    </div>
+
+    <div class="callout plain">
+      <h4>覚え方</h4>
+      <p><b>.difypkg = エンジン</b>（Dify 全体に 1 回入れる）／<b>.yml = 車体</b>（アプリごとに入れる）。
+      エンジンが入っていない状態で車体だけ入れると、アプリを開いたときにツールのノードがエラーになります。<b>順番は .difypkg が先</b>です。</p>
+    </div>
+  </section>
+
+  <!-- ============ 2 ============ -->
+  <section id="security">
+    <h2>2. 安全性の根拠</h2>
+    <p class="sub">
+      「たぶん大丈夫」ではなく、中身を機械的に検査した結果です。
+      同じ検査は情報システム部門の手元でも再現できます（→ <a href="#verify" style="color:var(--accent)">4 章</a>）。
+    </p>
+
+    <h3>そもそも .difypkg とは</h3>
+    <p>
+      拡張子が独自なだけで、<b>実体は ZIP ファイル</b>です。<code>.zip</code> に名前を変えれば普通に展開でき、
+      中身は全部そのまま読めます。インストーラーでも実行形式でもありません。
+    </p>
+
+    <h3>検査結果</h3>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th>検査項目</th><th>結果</th><th style="width:1%">判定</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>中身の形式</td>
+            <td class="check">全 21 ファイルがテキスト（.py / .yaml / .md / .svg）<br>実行形式・バイナリ・圧縮された謎データは 0 件</td>
+            <td class="verdict ok">問題なし</td>
+          </tr>
+          <tr>
+            <td>外部への通信</td>
+            <td class="check">requests / urllib / socket / http / smtplib<br>いずれも import 0 件。通信するコードが存在しない</td>
+            <td class="verdict ok">問題なし</td>
+          </tr>
+          <tr>
+            <td>OS コマンド実行</td>
+            <td class="check">subprocess / os.system / os.exec / popen<br>いずれも 0 件</td>
+            <td class="verdict ok">問題なし</td>
+          </tr>
+          <tr>
+            <td>難読化・隠しコード</td>
+            <td class="check">base64 / marshal / pickle / __import__<br>いずれも 0 件。全コードが平文</td>
+            <td class="verdict ok">問題なし</td>
+          </tr>
+          <tr>
+            <td>ファイルの書き込み先</td>
+            <td class="check">すべて tempfile.TemporaryDirectory 配下<br>実行が終わると自動削除。既存ファイルを書き換えない</td>
+            <td class="verdict ok">問題なし</td>
+          </tr>
+          <tr>
+            <td>プラグインが使う外部ライブラリ</td>
+            <td class="check">dify_plugin と openpyxl の 2 つだけ<br>他はすべて Python 標準ライブラリ</td>
+            <td class="verdict ok">問題なし</td>
+          </tr>
+          <tr>
+            <td>コードの量</td>
+            <td class="check">Python 2,220 行 / YAML 232 行<br>全文を目視レビューできる規模</td>
+            <td class="verdict ok">問題なし</td>
+          </tr>
+          <tr>
+            <td>コードを動的に実行する処理</td>
+            <td class="check">exec / compile が <b>1 箇所</b>あり<br>core_logic/core_runner.py の execute_code()</td>
+            <td class="verdict note">要説明 →</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>受け取ったファイルの照合用ハッシュ</h3>
+    <p>手元のファイルが改ざんされていないかは SHA-256 で確認できます。</p>
+    <pre><span class="c">plan_automation.difypkg</span>
+c4694a1efbacaabea74ffc5c0cc58b40650befdd22ed2fb33d91113dfd1df8e0
+
+<span class="c">plan_automation_workflow.yml</span>
+16a8ce0700064cb7dcf6c1122fcf427ba11468051f4571bc6d97e10571f8cfac
+
+<span class="c">python_runner_chatflow.yml</span>
+d2d07025e20a7d5b55b9e0f8b50b5063cc824bf4bf41d2f5e56e1bfab696a794</pre>
+  </section>
+
+  <!-- ============ 3 ============ -->
+  <section id="exec">
+    <h2>3. exec について（正直な説明）</h2>
+    <p class="sub">
+      情報システム部門がコードを検査すると、まずここが引っかかります。隠さず先に説明します。
+    </p>
+
+    <div class="callout">
+      <h4>exec は「自分で貼り付けた Python を動かす」ためだけに使っています</h4>
+      <p>
+        このプラグインの目的そのものが「Jupyter Lab の代わりに Dify で自分の Python を動かす」ことなので、
+        コードを実行する処理は<b>機能の中核</b>であって、隠された裏口ではありません。
+        Jupyter Lab でセルを実行するのと同じ性質のものです。
+      </p>
+    </div>
+
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th style="width:30%">確認したいこと</th><th>実際</th></tr></thead>
+        <tbody>
+          <tr><td>どこにあるか</td><td>core_logic/core_runner.py の <code>execute_code()</code> 1 箇所のみ</td></tr>
+          <tr><td>何を実行するか</td><td>Dify のワークフローの環境変数（<code>CORE_CODE</code> / <code>PYTHON_CODE</code>）に<b>自分で貼り付けたコード</b>だけ</td></tr>
+          <tr><td>外部から注入される経路は</td><td>ない。実行するコードの受け取り口はワークフロー定義で環境変数に固定されており、チャットの入力文やアップロードしたファイルがコードとして実行されることはない</td></tr>
+          <tr><td>誰が書き換えられるか</td><td>そのワークフローを編集できる Dify のユーザーだけ（＝ Dify の権限設定に従う）</td></tr>
+          <tr><td>実行される場所</td><td>社内 Dify のプラグイン用コンテナの中。外へは出ない</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p style="margin-top:22px">
+      該当箇所は全部で 4 行です。ここだけ読めば、何を実行しているかが確認できます。
+    </p>
+    <pre>compiled = compile(code_text, f"&lt;{error_label}&gt;", "exec")
+with contextlib.redirect_stdout(buffer), contextlib.redirect_stderr(buffer):
+    exec(compiled, module.__dict__)          <span class="c"># ← 貼り付けたコードを実行</span>
+    main = module.__dict__.get("main")       <span class="c"># main() があれば呼ぶ</span></pre>
+    <p style="font-size:13.5px;color:var(--muted)">
+      <code>redirect_stdout</code> で <code>print</code> の出力を横取りして画面に表示しているだけで、
+      実行結果を外部へ送る処理は含まれていません。
+    </p>
+  </section>
+
+  <!-- ============ 4 ============ -->
+  <section id="verify">
+    <h2>4. 自分で検証する</h2>
+    <p class="sub">こちらの説明を信用せずに、手元で同じ検査を再現するための手順です。</p>
+
+    <h3>中身を全部見る</h3>
+    <pre><span class="c"># ZIP として展開して、入っているファイルを全部並べる</span>
+unzip -o plan_automation.difypkg -d pkg
+find pkg -type f | sort</pre>
+    <p style="font-size:13.5px;color:var(--muted)">
+      Windows なら拡張子を <code>.zip</code> に変えてエクスプローラーで開けば同じです。
+    </p>
+
+    <h3>危険な処理が無いことを確認する</h3>
+    <pre><span class="c"># 外部通信（0 件になるはず）</span>
+grep -rnE "import (requests|urllib|socket|http|smtplib)" pkg --include=*.py
+
+<span class="c"># OS コマンド実行（0 件になるはず）</span>
+grep -rnE "subprocess|os\.system|os\.exec|popen" pkg --include=*.py
+
+<span class="c"># 難読化・隠しコード（0 件になるはず）</span>
+grep -rnE "base64|marshal|pickle|__import__" pkg --include=*.py
+
+<span class="c"># コード実行（core_runner.py の 1 箇所だけ出るはず）</span>
+grep -rnE "\b(eval|exec)\(" pkg --include=*.py</pre>
+
+    <h3>受け取ったファイルの同一性を確認する</h3>
+    <pre>sha256sum plan_automation.difypkg
+<span class="c"># Windows: certutil -hashfile plan_automation.difypkg SHA256</span></pre>
+    <p style="font-size:13.5px;color:var(--muted)">
+      出た値が <a href="#security" style="color:var(--accent)">2 章</a>のハッシュと一致すれば、受け渡しの途中で変わっていません。
+    </p>
+  </section>
+
+  <!-- ============ 5 ============ -->
+  <section id="setup">
+    <h2>5. 導入手順</h2>
+    <p class="sub">
+      上から順に。1 と 2 は最初の 1 回だけ、3 以降はアプリごとに行います。
+      画面の文言は Dify のバージョンで多少変わりますが、位置は同じです。
+    </p>
+
+    <ol class="steps">
+      <li>
+        <div class="stepbody">
+          <h4>署名検証をオフにする<span class="only">セルフホストのみ</span></h4>
+          <p>
+            Dify は既定で「署名のないプラグイン」を拒否します。自前で作ったプラグインは署名がないため、
+            先にこの設定を入れないとインストールで弾かれます。
+            <b>クラウド版（cloud.dify.ai）を使っている場合はこの手順は不要</b>です。
+          </p>
+          <p>Dify を動かしているサーバーの <code>docker/.env</code> に 1 行追加して、再起動します。</p>
+          <pre>FORCE_VERIFYING_SIGNATURE=false</pre>
+          <pre>cd docker
+docker compose down &amp;&amp; docker compose up -d</pre>
+        </div>
+      </li>
+
+      <li>
+        <div class="stepbody">
+          <h4>プラグインをインストールする</h4>
+          <p>ここが今回いちばん分かりにくいところです。アプリの中ではなく、<b>Dify 全体の設定側</b>から入れます。</p>
+          <div class="path">画面右上のメニュー → プラグイン → 「プラグインをインストールする」 → ローカルパッケージファイル</div>
+          <p>ファイル選択で <code>plan_automation.difypkg</code> を指定するとインストールが始まります。
+          このとき Dify が <code>requirements.txt</code> に書かれたライブラリ
+          （dify_plugin / openpyxl / pandas / numpy）を取得するため、少し時間がかかります。</p>
+          <p>完了後、プラグイン一覧に <b>Cash Plan Automation</b> が出れば成功です。</p>
+        </div>
+      </li>
+
+      <li>
+        <div class="stepbody">
+          <h4>アプリ（.yml）をインポートする</h4>
+          <div class="path">スタジオ → 「アプリを作成する」 → 「DSL ファイルをインポート」</div>
+          <p>使いたい方の .yml を選びます。両方入れても構いません。</p>
+          <ul class="tight">
+            <li><code>plan_automation_workflow.yml</code> … 資金計画アプリ</li>
+            <li><code>python_runner_chatflow.yml</code> … Python 実行アプリ</li>
+          </ul>
+          <p>
+            インポート後、ツールのノードに赤いエラーマークが出ていたら、
+            ノードを開いてツールを選び直し、入力の割り当てを付け直してください
+            （プラグインの ID がインポート時に解決されないことがあるためです）。
+          </p>
+        </div>
+      </li>
+
+      <li>
+        <div class="stepbody">
+          <h4>社内の Python コードを貼り付ける</h4>
+          <p>コードはリポジトリにもファイルにも入っていません。ここで初めて社内 Dify の中に入れます。</p>
+          <div class="path">ワークフロー編集画面 → 環境変数（ENV）</div>
+          <ul class="tight">
+            <li>資金計画アプリ … <code>CORE_CODE</code> に資金計画プログラムを貼り付け</li>
+            <li>Python 実行アプリ … <code>PYTHON_CODE</code> に動かしたいプログラムを貼り付け</li>
+          </ul>
+          <p>
+            書き換えるのは入出力パスのハードコード部分だけです
+            （<code>input_path</code> / <code>output_dir</code> という変数が最初から使えます）。
+            空のままでも動作確認用のサンプル処理が動くので、先に手順 5 まで通してから貼っても構いません。
+          </p>
+        </div>
+      </li>
+
+      <li>
+        <div class="stepbody">
+          <h4>公開して実行する</h4>
+          <p>右上の「公開する」を押してから「アプリを実行」。
+          資金計画アプリはフォーム、Python 実行アプリはチャット画面が開きます。</p>
+          <p>
+            最初は同梱のサンプル（<code>sample_source_R7.xlsx</code> と <code>手順書_資金実績まとめ.txt</code>）で
+            通しの動作を確認してから、実データに移るのが安全です。
+          </p>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <!-- ============ 6 ============ -->
+  <section id="flow">
+    <h2>6. 完成後の姿</h2>
+    <p class="sub">導入が終わると、社内 Dify の中だけで次のように処理が回ります。</p>
+
+    <div class="flow">
+      <div class="frow">
+        <div class="who">利用者</div>
+        <div class="what">元データ Excel と手順書をアップロード <span>／ または チャットにファイルを添付</span></div>
+      </div>
+      <div class="arrowdown">↓</div>
+      <div class="frow">
+        <div class="who">プラグイン</div>
+        <div class="what">手順書のとおりに Excel から抜き出して、入力用の 1 枚にまとめる</div>
+      </div>
+      <div class="arrowdown">↓</div>
+      <div class="frow">
+        <div class="who">貼り付けたコード</div>
+        <div class="what">環境変数の Python を実行 <span>（print の出力をそのまま回収）</span></div>
+      </div>
+      <div class="arrowdown">↓</div>
+      <div class="frow">
+        <div class="who">利用者</div>
+        <div class="what">Jupyter 風の実行レポートを見て、出力ファイルをダウンロード</div>
+      </div>
+    </div>
+
+    <p>
+      データもコードも社内 Dify のコンテナの中で完結し、外部への通信は発生しません。
+    </p>
+  </section>
+
+  <!-- ============ 7 ============ -->
+  <section id="caveat">
+    <h2>7. 事前に確認すること</h2>
+    <p class="sub">安全性とは別に、社内の環境やルール次第で引っかかる可能性がある点です。</p>
+
+    <div class="callout">
+      <h4>インストール時に外部からライブラリを取得します</h4>
+      <p>
+        プラグインのファイル自体にライブラリは入っていません。インストールの瞬間に Dify が
+        <b>PyPI</b> から dify_plugin / openpyxl / pandas / numpy を取得します。
+        Dify のサーバーが外部に出られない閉域環境だと、ここで失敗します。
+      </p>
+      <p>
+        社内 PyPI ミラーがあればそちらに向ける設定で解決できます。
+        完全な閉域の場合は別の渡し方が必要になるので、その旨をお知らせください。
+      </p>
+    </div>
+
+    <div class="callout">
+      <h4>DSL をエクスポートすると、貼り付けたコードも一緒に出ます</h4>
+      <p>
+        環境変数の値はワークフローの定義に保存されます。つまり
+        <code>CORE_CODE</code> / <code>PYTHON_CODE</code> にコードを貼った<b>後</b>に Dify から DSL を
+        エクスポートすると、その .yml に社内のコードが含まれます。
+      </p>
+      <p>
+        配布した .yml は環境変数が空のテンプレートなので問題ありませんが、
+        運用開始後にエクスポートしたファイルの扱いにはご注意ください。
+      </p>
+    </div>
+
+    <div class="callout plain">
+      <h4>Excel 抜粋エディタ（手順書を作るツール）について</h4>
+      <p>
+        手順書はブラウザで <code>okadamasayuki.github.io/excel-editor</code> を開いて作ります。
+        処理はすべてブラウザ内で完結し、Excel の中身はどこにも送信されません。
+      </p>
+      <p>
+        社内から外部サイトを開けない場合は、そのリポジトリの <code>docs/index.html</code> を
+        1 ファイル持ち込んでダブルクリックで開けば、同じものがオフラインで動きます。
+      </p>
+    </div>
+  </section>
+
+  </main>
+</div>
+</div>
+</body>
+</html>

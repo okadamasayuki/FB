@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ソースコード一覧 — Python 実行プラグイン</title>
+</head>
+<body>
+
+<style>
+  :root {
+    --ground:#FCFCFD; --surface:#FFFFFF; --surface-2:#F5F7FA;
+    --rule:#E4E7EE; --ink:#171B24; --muted:#5C6579;
+    --accent:#1B5FA8; --accent-soft:#EAF1F9;
+    --c-comment:#7A8598; --c-string:#0F6E4A; --c-kw:#8A3E9E; --c-key:#1B5FA8;
+    --mono: ui-monospace,"SFMono-Regular",Menlo,Consolas,"Liberation Mono",monospace;
+    --sans: -apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic Medium","Yu Gothic",Meiryo,sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --ground:#12151C; --surface:#181C25; --surface-2:#1E232E;
+      --rule:#2A303C; --ink:#E9ECF2; --muted:#98A1B3;
+      --accent:#7FB3E8; --accent-soft:#1B2634;
+      --c-comment:#6D7688; --c-string:#63C79B; --c-kw:#C58FD8; --c-key:#7FB3E8; }
+  }
+  :root[data-theme="dark"] { --ground:#12151C; --surface:#181C25; --surface-2:#1E232E;
+    --rule:#2A303C; --ink:#E9ECF2; --muted:#98A1B3;
+    --accent:#7FB3E8; --accent-soft:#1B2634;
+    --c-comment:#6D7688; --c-string:#63C79B; --c-kw:#C58FD8; --c-key:#7FB3E8; }
+  :root[data-theme="light"] { --ground:#FCFCFD; --surface:#FFFFFF; --surface-2:#F5F7FA;
+    --rule:#E4E7EE; --ink:#171B24; --muted:#5C6579;
+    --accent:#1B5FA8; --accent-soft:#EAF1F9;
+    --c-comment:#7A8598; --c-string:#0F6E4A; --c-kw:#8A3E9E; --c-key:#1B5FA8; }
+
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--ground); color:var(--ink);
+         font-family:var(--sans); font-size:15px; line-height:1.8; }
+  .page { max-width:1320px; margin:0 auto; padding:0 22px 90px; }
+
+  header.doc { padding:44px 0 24px; border-bottom:2px solid var(--ink); margin-bottom:30px; }
+  .eyebrow { font-size:11.5px; letter-spacing:.16em; color:var(--muted); font-weight:700; margin-bottom:12px; }
+  h1 { font-size:clamp(23px,3vw,31px); margin:0 0 12px; font-weight:700; letter-spacing:-.01em; }
+  .lede { color:var(--muted); font-size:15px; max-width:70ch; margin:0; }
+  .meta { margin-top:16px; font-family:var(--mono); font-size:12.5px; color:var(--muted); }
+
+  .shell { display:grid; grid-template-columns:290px minmax(0,1fr); gap:38px; }
+
+  nav.files { position:sticky; top:20px; align-self:start; max-height:calc(100vh - 40px);
+              overflow-y:auto; padding-right:6px; }
+  .search { width:100%; font-family:var(--mono); font-size:12.5px; padding:8px 11px;
+            border:1px solid var(--rule); border-radius:4px; background:var(--surface);
+            color:var(--ink); margin-bottom:14px; }
+  .search:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+  .navgroup { font-size:11px; letter-spacing:.1em; color:var(--muted); font-weight:700;
+              margin:18px 0 8px; padding-bottom:6px; border-bottom:1px solid var(--rule); }
+  .navgroup:first-child { margin-top:0; }
+  a.navlink { display:flex; justify-content:space-between; gap:10px; align-items:baseline;
+              padding:4px 9px; font-family:var(--mono); font-size:12px; color:var(--muted);
+              text-decoration:none; border-radius:3px; border-left:2px solid transparent; }
+  a.navlink:hover, a.navlink:focus-visible { background:var(--accent-soft); color:var(--accent); }
+  a.navlink:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+  a.navlink .nf { word-break:break-all; }
+  a.navlink .nl { color:var(--muted); font-size:11px; font-variant-numeric:tabular-nums; flex:none; }
+  a.navlink.hide { display:none; }
+
+  h2.grouphead { font-size:19px; margin:44px 0 4px; font-weight:700; scroll-margin-top:20px; }
+  h2.grouphead:first-child { margin-top:0; }
+  .groupnote { color:var(--muted); font-size:13.5px; margin:0 0 20px; }
+
+  section.file { margin-bottom:26px; scroll-margin-top:16px;
+                 border:1px solid var(--rule); border-radius:5px; overflow:hidden;
+                 background:var(--surface); }
+  .fhead { display:flex; justify-content:space-between; gap:18px; align-items:flex-start;
+           padding:13px 18px; background:var(--surface-2); border-bottom:1px solid var(--rule); }
+  .fpath { font-family:var(--mono); font-size:13.5px; font-weight:700; word-break:break-all; }
+  .fdesc { font-size:12.5px; color:var(--muted); margin-top:2px; }
+  .fmeta { display:flex; gap:9px; align-items:center; flex:none; }
+  .lang { font-family:var(--mono); font-size:10.5px; font-weight:700; letter-spacing:.05em;
+          padding:2px 8px; border-radius:3px; background:var(--accent-soft); color:var(--accent); }
+  .lang.yaml { background:var(--surface); color:var(--muted); border:1px solid var(--rule); }
+  .lang.md, .lang.text { background:var(--surface); color:var(--muted); border:1px solid var(--rule); }
+  .lines { font-family:var(--mono); font-size:11.5px; color:var(--muted);
+           font-variant-numeric:tabular-nums; white-space:nowrap; }
+
+  .codewrap { overflow-x:auto; background:var(--surface); }
+  pre.code { margin:0; padding:14px 0; font-family:var(--mono); font-size:12.5px;
+             line-height:1.68; white-space:pre; tab-size:4; }
+  pre.code .ln { display:inline-block; width:3.4em; padding-right:1.1em; text-align:right;
+                 color:var(--muted); opacity:.55; user-select:none;
+                 font-variant-numeric:tabular-nums; }
+  pre.code .row { display:block; padding-right:20px; }
+  pre.code .row:hover { background:var(--surface-2); }
+  .cm { color:var(--c-comment); font-style:italic; }
+  .st { color:var(--c-string); }
+  .kw { color:var(--c-kw); }
+  .yk { color:var(--c-key); }
+  .empty { color:var(--muted); padding-left:1.2em; }
+
+  @media (max-width:980px) {
+    .shell { grid-template-columns:minmax(0,1fr); gap:0; }
+    nav.files { position:static; max-height:none; margin-bottom:34px; }
+  }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior:auto; } }
+  html { scroll-behavior:smooth; }
+</style>
+
+<div class="page">
+<header class="doc">
+  <div class="eyebrow">ソースコード全文 — Python 実行プラグイン</div>
+  <h1>python_runner.difypkg の中身</h1>
+  <p class="lede">
+    Python 実行アプリ(Jupyter Lab の代替)のプラグインの中身を、そのまま並べたものです。
+    資金計画のコードは含まれていません。使うライブラリは pandas / numpy / openpyxl だけです。
+  </p>
+  <div class="meta">14 ファイル / 782 行</div>
+</header>
+
+<div class="shell">
+  <nav class="files">
+    <input class="search" id="q" type="search" placeholder="ファイル名で絞り込み" aria-label="ファイル名で絞り込み">
+    <p class="navgroup">python_runner.difypkg の中身</p>
+<a href="#f1" class="navlink"><span class="nf">manifest.yaml</span><span class="nl">32</span></a>
+<a href="#f2" class="navlink"><span class="nf">main.py</span><span class="nl">6</span></a>
+<a href="#f3" class="navlink"><span class="nf">requirements.txt</span><span class="nl">6</span></a>
+<a href="#f4" class="navlink"><span class="nf">.difyignore</span><span class="nl">4</span></a>
+<a href="#f5" class="navlink"><span class="nf">provider/python_runner.yaml</span><span class="nl">15</span></a>
+<a href="#f6" class="navlink"><span class="nf">provider/python_runner.py</span><span class="nl">9</span></a>
+<a href="#f7" class="navlink"><span class="nf">tools/run_python.yaml</span><span class="nl">72</span></a>
+<a href="#f8" class="navlink"><span class="nf">tools/run_python.py</span><span class="nl">84</span></a>
+<a href="#f9" class="navlink"><span class="nf">core_logic/runner.py</span><span class="nl">84</span></a>
+<a href="#f10" class="navlink"><span class="nf">core_logic/python_runner.py</span><span class="nl">107</span></a>
+<a href="#f11" class="navlink"><span class="nf">core_logic/notebook.py</span><span class="nl">193</span></a>
+<a href="#f12" class="navlink"><span class="nf">core_logic/__init__.py</span><span class="nl">0</span></a>
+<a href="#f13" class="navlink"><span class="nf">_assets/icon.svg</span><span class="nl">9</span></a>
+<p class="navgroup">アプリ(Dify にインポートする DSL)</p>
+<a href="#f14" class="navlink"><span class="nf">python_runner_chatflow.yml</span><span class="nl">161</span></a>
+  </nav>
+  <main><h2 class="grouphead" id="g0">python_runner.difypkg の中身</h2>
+<p class="groupnote">Python 実行アプリだけのプラグイン。全 13 ファイル・621 行。資金計画のコードは入っていません。</p>
+<section class="file" id="f1">
+  <div class="fhead">
+    <div>
+      <div class="fpath">manifest.yaml</div>
+      <div class="fdesc">プラグインの定義(名前・使うメモリ・実行環境)</div>
+    </div>
+    <div class="fmeta"><span class="lang yaml">yaml</span><span class="lines">32 行</span></div>
+  </div>
+  <div class="codewrap"><pre class="code" data-lang="yaml">version: 0.0.1
+type: plugin
+author: okadamasayuki
+name: python_runner
+label:
+  en_US: Python Runner
+  ja_JP: Python 実行
+description:
+  en_US: &gt;-
+    Runs a Python program stored in the workflow with files attached in chat.
+    Captures print output and returns a Jupyter-style report plus generated files.
+  ja_JP: &gt;-
+    ワークフローに貼り付けた Python プログラムを、チャットに添付されたファイルを
+    入力として実行します。print 出力をそのまま回収し、Jupyter 風の実行レポートと
+    出力ファイルを返します(Jupyter Lab の代替)。
+icon: icon.svg
+resource:
+  memory: 268435456
+  permission: {}
+plugins:
+  tools:
+    - provider/python_runner.yaml
+meta:
+  version: 0.0.1
+  arch:
+    - amd64
+    - arm64
+  runner:
+    language: python
+    version: &quot;3.12&quot;
+    entrypoint: main
+created_at: 2026-08-05T00:00:00Z
+</pre></div>
+</section>
+<section class="file" id="f2">
+  <div class="fhead">
+    <div>
+      <div class="fpath">main.py</div>
+      <div class="fdesc">起動の入口。これだけ</div>
+    </div>
+    <div class="fmeta"><span class="lang python">python</span><span class="lines">6 行</span></div>
+  </div>
+  <div class="codewrap"><pre class="code" data-lang="python">from dify_plugin import DifyPluginEnv, Plugin
+
+plugin = Plugin(DifyPluginEnv(MAX_REQUEST_TIMEOUT=300))
+
+if __name__ == &quot;__main__&quot;:
+    plugin.run()
+</pre></div>
+</section>
+<section class="file" id="f3">
+  <div class="fhead">
+    <div>
+      <div class="fpath">requirements.txt</div>
+      <div class="fdesc">使うライブラリ(pandas / numpy / openpyxl)</div>
+    </div>
+    <div class="fmeta"><span class="lang text">text</span><span class="lines">6 行</span></div>
+  </div>
+  <div class="codewrap"><pre class="code" data-lang="text">dify_plugin&gt;=0.2.0
+# 貼り付ける Python プログラムが使うライブラリ
+# ※ datetime などの標準ライブラリは記載不要
+openpyxl~=3.1
+pandas~=2.2.2
+numpy~=2.0
+</pre></div>
+</section>
+<section class="file" id="f4">
+  <div class="fhead">
+    <div>
+      <div class="fpath">.difyignore</div>
+      <div class="fdesc">パッケージに含めないものの指定</div>
+    </div>
+    <div class="fmeta"><span class="lang text">text</span><span class="lines">4 行</span></div>
+  </div>
+  <div class="codewrap"><pre class="code" data-lang="text">__pycache__/
+*.pyc
+.pytest_cache/
+.DS_Store
+</pre></div>
+</section>
+<section class="file" id="f5">
+  <div class="fhead">
+    <div>
+      <div class="fpath">provider/python_runner.yaml</div>
+      <div class="fdesc">ツールの提供元の定義</div>
+    </div>
+    <div class="fmeta"><span class="lang yaml">yaml</span><span class="lines">15 行</span></div>
+  </div>
+  <div class="codewrap"><pre class="code" data-lang="yaml">identity:
+  author: okadamasayuki
+  name: python_runner
+  label:
+    en_US: Python Runner
+    ja_JP: Python 実行
+  description:
+    en_US: Run a Python program with files attached in chat.
+    ja_JP: 貼り付けた Python プログラムを、添付ファイルを入力として実行します。
+  icon: icon.svg
+tools:
+  - tools/run_python.yaml
+extra:
+  python:
+    source: provider/python_runner.py
+</pre></div>
+</section>
+<section class="file" id="f6">
+  <div class="fhead">
+    <div>
+      <div class="fpath">provider/python_runner.py</div>
+      <div class="fdesc">認証なしの宣言のみ</div>
+    </div>
+    <div class="fmeta"><span class="lang python">python</span><span class="lines">9 行</span></div>
+  </div>
+  <div class="codewrap"><pre class="code" data-lang="python">from typing import Any
+
+from dify_plugin import ToolProvider
+
+
+class PythonRunnerProvider(ToolProvider):
+    def _validate_credentials(self, credentials: dict[str, Any]) -&gt; None:
+        # 認証情報は不要
+        pass
+</pre></div>
+</section>
+<section class="file" id="f7">
+  <div class="fhead">
+    <div>
+      <div class="fpath">tools/run_python.yaml</div>
+      <div class="fdesc">入力欄(プログラム・添付ファイル・本文)の定義</div>
+    </div>
+    <div class="fmeta"><span class="lang yaml">yaml</span><span class="lines">72 行</span></div>
+  </div>
+  <div class="codewrap"><pre class="code" data-lang="yaml">identity:
+  name: run_python
+  author: okadamasayuki
+  label:
+    en_US: Run Python
+    ja_JP: Python を実行
+description:
+  human:
+    en_US: &gt;-
+      Runs the Python program stored in the workflow (PYTHON_CODE) with the files
+      attached in chat. Returns a Jupyter-style report and generated files.
+      If required files are missing, it asks for them instead of failing.
+  ja_JP: &gt;-
+      ワークフローに貼り付けた Python プログラム(PYTHON_CODE)を、チャットに添付された
+      ファイルを入力として実行します。Jupyter 風の実行レポートと出力ファイルを返します。
+      必要なファイルが足りないときは、実行せずに「添付してください」と聞き返します。
+  llm: &gt;-
+    Execute a Python program (provided as text) with user-attached files as inputs.
+    Captures print output, returns a Jupyter-style HTML report and generated files.
+    If the program declares required input files in a header comment and they are not
+    attached, returns a message asking the user to attach them.
+parameters:
+  - name: code
+    type: string
+    required: true
+    form: llm
+    label:
+      en_US: Python code
+      ja_JP: Python プログラム
+    human_description:
+      en_US: The program to run (usually bound to the PYTHON_CODE environment variable).
+      ja_JP: 実行するプログラム(通常は環境変数 PYTHON_CODE を割り当てる)。
+    llm_description: &gt;-
+      The Python source code to execute. Variables input_dir, input_files, input_path,
+      output_dir and user_input are provided. A header comment like
+      「# 入力ファイル: a.xlsx, b.csv」 declares required attachments.
+  - name: files
+    type: files
+    required: false
+    form: llm
+    label:
+      en_US: Input files
+      ja_JP: 入力ファイル(チャット添付)
+    human_description:
+      en_US: Files attached in chat. Saved into input_dir for the program.
+      ja_JP: チャットに添付されたファイル。input_dir に保存されてプログラムから使えます。
+    llm_description: Files attached by the user, made available to the program in input_dir.
+  - name: user_text
+    type: string
+    required: false
+    form: llm
+    label:
+      en_US: User message
+      ja_JP: ユーザーの入力テキスト
+    human_description:
+      en_US: The chat message text, passed to the program as user_input.
+      ja_JP: チャットの本文。プログラムに user_input 変数として渡されます。
+    llm_description: The user&#x27;s chat message, available to the program as user_input.
+  - name: title
+    type: string
+    required: false
+    form: llm
+    label:
+      en_US: Report title
+      ja_JP: レポートのタイトル
+    human_description:
+      en_US: Title shown on the execution report. Defaults to &quot;Python 実行&quot;.
+      ja_JP: 実行レポートに表示するタイトル。省略時は「Python 実行」。
+    llm_description: Optional title for the execution report.
+extra:
+  python:
+    source: tools/run_python.py
+</pre></div>
+</section>
+<section class="file" id="f8">
+  <div class="fhead">
+    <div>
+      <div class="fpath">tools/run_python.py</div>
+      <div class="fdesc">ツール本体。実行して結果とファイルを返す</div>
+    </div>
+    <div class="fmeta"><span class="lang python">python</span><span class="lines">84 行</span></div>
+  </div>
+  <div class="codewrap"><pre class="code" data-lang="python">import tempfile
+import traceback
+from collections.abc import Generator
+from pathlib import Path
+from typing import Any
+
+from dify_plugin import Tool
+from dify_plugin.entities.tool import ToolInvokeMessage
+
+from core_logic import notebook, python_runner
+
+
+class RunPythonTool(Tool):
+    def _invoke(self, tool_parameters: dict[str, Any]) -&gt; Generator[ToolInvokeMessage, None, None]:
+        try:
+            yield from self._run(tool_parameters)
+        except Exception:
+            yield self.create_text_message(
+                &quot;予期しないエラーが発生しました:\n&quot; + traceback.format_exc()
+            )
+            yield self.create_json_message({&quot;status&quot;: &quot;error&quot;, &quot;message&quot;: &quot;unexpected error&quot;})
+
+    def _run(self, tool_parameters: dict[str, Any]) -&gt; Generator[ToolInvokeMessage, None, None]:
+        code = (tool_parameters.get(&quot;code&quot;) or &quot;&quot;).strip()
+        if not code:
+            yield self.create_text_message(
+                &quot;実行するプログラムが設定されていません。\n&quot;
+                &quot;ワークフローの環境変数 `PYTHON_CODE` に Python プログラムを貼り付けてから、&quot;
+                &quot;もう一度公開してください。&quot;
+            )
+            yield self.create_json_message({&quot;status&quot;: &quot;error&quot;, &quot;message&quot;: &quot;no code&quot;})
+            return
+
+        files = tool_parameters.get(&quot;files&quot;) or []
+        attachments = [
+            (getattr(f, &quot;filename&quot;, None) or f&quot;file{i + 1}&quot;, f.blob) for i, f in enumerate(files)
+        ]
+        user_text = tool_parameters.get(&quot;user_text&quot;) or &quot;&quot;
+        title = (tool_parameters.get(&quot;title&quot;) or &quot;&quot;).strip() or &quot;Python 実行&quot;
+
+        with tempfile.TemporaryDirectory() as tmp:
+            result = python_runner.run_python(code, attachments, Path(tmp), user_input=user_text)
+
+            # 必要なファイルが足りない → 実行せずに聞き返す
+            if result.missing:
+                lines = [&quot;このプログラムの実行には、次のファイルの添付が必要です。&quot;, &quot;&quot;]
+                lines += [f&quot;- **{name}**&quot; for name in result.missing]
+                lines += [
+                    &quot;&quot;,
+                    &quot;ファイルを添付して、もう一度送信してください。&quot;,
+                ]
+                if result.attached:
+                    lines.append(f&quot;(添付済み: {&#x27;, &#x27;.join(result.attached)})&quot;)
+                yield self.create_text_message(&quot;\n&quot;.join(lines))
+                yield self.create_json_message(
+                    {&quot;status&quot;: &quot;need_files&quot;, &quot;missing&quot;: result.missing, &quot;attached&quot;: result.attached}
+                )
+                return
+
+            output_names = [p.name for p in result.output_files]
+            yield self.create_text_message(
+                notebook.python_run_markdown(
+                    title, result.success, result.log, output_names, result.attached
+                )
+            )
+            report_html = notebook.python_run_html(
+                title, result.success, code, result.log, output_names, result.attached
+            )
+            yield self.create_blob_message(
+                blob=report_html.encode(&quot;utf-8&quot;),
+                meta={&quot;mime_type&quot;: notebook.HTML_MIME, &quot;filename&quot;: f&quot;実行レポート_{title}.html&quot;},
+            )
+            for path in result.output_files:
+                yield self.create_blob_message(
+                    blob=path.read_bytes(),
+                    meta={&quot;mime_type&quot;: notebook.mime_for(path.name), &quot;filename&quot;: path.name},
+                )
+            yield self.create_json_message(
+                {
+                    &quot;status&quot;: &quot;success&quot; if result.success else &quot;error&quot;,
+                    &quot;attached&quot;: result.attached,
+                    &quot;output_files&quot;: output_names,
+                }
+            )
+</pre></div>
+</section>
+<section class="file" id="f9">
+  <div class="fhead">
+    <div>
+      <div class="fpath">core_logic/runner.py</div>
+      <div class="fdesc">★貼り付けたコードを実行する部分(exec はここ)</div>
+    </div>
+    <div class="fmeta"><span class="lang python">python</span><span class="lines">84 行</span></div>
+  </div>
+  <div class="codewrap"><pre class="code" data-lang="python">&quot;&quot;&quot;貼り付けられた Python を実行する土台。
+
+資金計画のコア実行(core_runner)と、汎用の Python 実行(python_runner)の
+どちらもここを使う。資金計画に依存しないので、Python 実行だけのプラグインにも
+そのまま入る。
+&quot;&quot;&quot;
+
+from __future__ import annotations
+
+import contextlib
+import inspect
+import io
+import traceback
+import types
+from dataclasses import dataclass, field
+from pathlib import Path
+
+
+@dataclass
+class CoreResult:
+    success: bool
+    log: str
+    output_files: list[Path] = field(default_factory=list)
+
+
+def execute_code(
+    code_text: str,
+    variables: dict,
+    output_dir: str | Path,
+    error_label: str = &quot;貼り付けた Python&quot;,
+) -&gt; CoreResult:
+    &quot;&quot;&quot;貼り付けられた Python を、変数を与えて実行する共通処理。
+
+    - variables はコードの中で最初から使えるグローバル変数になる
+    - モジュールとして実行するため __name__ は &quot;__main__&quot; ではなく、
+      `if __name__ == &quot;__main__&quot;:` のブロックは実行されない(main() は下で呼ぶ)
+    - def main(...) が定義されていれば、定義にある引数だけを渡して呼ぶ
+    - 出力ファイルは main の戻り値、無ければ output_dir から自動回収する
+    &quot;&quot;&quot;
+    buffer = io.StringIO()
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    module = types.ModuleType(&quot;core_injected&quot;)
+    module.__dict__.update(variables)
+    try:
+        compiled = compile(code_text, f&quot;&lt;{error_label}&gt;&quot;, &quot;exec&quot;)
+        with contextlib.redirect_stdout(buffer), contextlib.redirect_stderr(buffer):
+            exec(compiled, module.__dict__)
+            main = module.__dict__.get(&quot;main&quot;)
+            outputs = main(**accepted_kwargs(main, variables)) if callable(main) else None
+        return collect(buffer, outputs, output_dir)
+    except Exception:
+        log = buffer.getvalue() + f&quot;\n{error_label} でエラーが発生しました:\n&quot; + traceback.format_exc()
+        return CoreResult(success=False, log=log)
+
+
+def accepted_kwargs(func, params: dict) -&gt; dict:
+    &quot;&quot;&quot;main() の定義にある引数だけを渡す(貼り付け側の書き方の自由度のため)。&quot;&quot;&quot;
+    try:
+        sig = inspect.signature(func)
+    except (TypeError, ValueError):
+        return {}
+    if any(p.kind is inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values()):
+        return dict(params)
+    return {name: value for name, value in params.items() if name in sig.parameters}
+
+
+def collect(buffer: io.StringIO, outputs, scan_dir: Path | None) -&gt; CoreResult:
+    &quot;&quot;&quot;出力ファイルを確定する。outputs(main の戻り値)が無ければ scan_dir から拾う。&quot;&quot;&quot;
+    if outputs is None and scan_dir is not None:
+        files = sorted(p for p in scan_dir.rglob(&quot;*&quot;) if p.is_file())
+    else:
+        files = [Path(p) for p in outputs or []]
+        missing = [p for p in files if not p.exists()]
+        if missing:
+            names = &quot;, &quot;.join(p.name for p in missing)
+            return CoreResult(
+                success=False,
+                log=buffer.getvalue() + f&quot;\nエラー: 出力ファイルが見つかりません: {names}&quot;,
+            )
+    log = buffer.getvalue()
+    if not files:
+        log += &quot;\n注意: 出力ファイルが作られませんでした(output_dir に保存してください)。&quot;
+    return CoreResult(success=True, log=log, output_files=files)
+</pre></div>
+</section>
+<section class="file" id="f10">
+  <div class="fhead">
+    <div>
+      <div class="fpath">core_logic/python_runner.py</div>
+      <div class="fdesc">添付ファイルの受け渡しと、不足ファイルの判定</div>
+    </div>
+    <div class="fmeta"><span class="lang python">python</span><span class="lines">107 行</span></div>
+  </div>
+  <div class="codewrap"><pre class="code" data-lang="python">&quot;&quot;&quot;汎用の Python 実行(Jupyter Lab の代替)。
+
+Jupyter Lab が使えない環境で、Dify を Python の実行環境として使うための仕組み。
+プログラムはワークフローの環境変数(PYTHON_CODE)に貼り付けておき、
+チャットに添付されたファイルを入力として実行する。
+
+プログラム側の約束事:
+
+- 先頭付近のコメントで必要な入力ファイルを宣言できる(無くてもよい)
+      # 入力ファイル: 元データ.xlsm, マスタ.csv
+  宣言があるのに添付が足りないときは実行せず、「このファイルを添付してください」と
+  返す(チャットで聞き返す動きになる)。
+- コードの中では次の変数が最初から使える:
+      input_dir    添付ファイルが置かれたフォルダ(Path)
+      input_files  添付ファイルのパスのリスト(添付順)
+      input_path   最初の添付ファイル(無ければ None)
+      output_dir   出力ファイルの保存先(ここに保存すれば自動で回収される)
+      user_input   チャットで一緒に入力されたテキスト
+- print() はそのまま実行レポートに表示される。
+- def main(...) を定義する書き方でも動く(core_runner.execute_code と同じ規約)。
+&quot;&quot;&quot;
+
+from __future__ import annotations
+
+import re
+from dataclasses import dataclass, field
+from pathlib import Path
+
+from .runner import execute_code
+
+RE_REQUIRED = re.compile(r&quot;^#\s*(?:入力|必要)ファイル\s*[::]\s*(.+)$&quot;, re.MULTILINE)
+
+
+def required_files(code: str) -&gt; list[str]:
+    &quot;&quot;&quot;コード先頭のコメントで宣言された入力ファイル名の一覧を返す。&quot;&quot;&quot;
+    names: list[str] = []
+    for m in RE_REQUIRED.finditer(str(code)):
+        for part in re.split(r&quot;[,、]&quot;, m.group(1)):
+            name = part.strip()
+            if name and name not in names:
+                names.append(name)
+    return names
+
+
+@dataclass
+class PyRunResult:
+    success: bool
+    log: str = &quot;&quot;
+    output_files: list[Path] = field(default_factory=list)
+    required: list[str] = field(default_factory=list)  # 宣言された入力ファイル
+    missing: list[str] = field(default_factory=list)  # 添付されていないもの
+    attached: list[str] = field(default_factory=list)  # 実際に添付されたファイル名
+
+
+def _is_attached(declared: str, attached_names: list[str]) -&gt; bool:
+    &quot;&quot;&quot;宣言名と添付名の照合。完全一致のほか、部分一致も許す。
+
+    (「元データ.xlsm」と宣言して「元データ_R7.xlsm」を添付した、
+     宣言は「元データ」だけ、のようなズレを吸収するため)
+    &quot;&quot;&quot;
+    for name in attached_names:
+        if declared == name or declared in name or name in declared:
+            return True
+    return False
+
+
+def run_python(
+    code: str,
+    attachments: list[tuple[str, bytes]],
+    work_dir: str | Path,
+    user_input: str = &quot;&quot;,
+) -&gt; PyRunResult:
+    &quot;&quot;&quot;貼り付けられたプログラムを、添付ファイルを入力として実行する。&quot;&quot;&quot;
+    work_dir = Path(work_dir)
+    input_dir = work_dir / &quot;input&quot;
+    output_dir = work_dir / &quot;output&quot;
+    input_dir.mkdir(parents=True, exist_ok=True)
+
+    input_files: list[Path] = []
+    for name, blob in attachments:
+        path = input_dir / (Path(name).name or &quot;file&quot;)
+        path.write_bytes(blob)
+        input_files.append(path)
+    attached_names = [p.name for p in input_files]
+
+    required = required_files(code)
+    missing = [name for name in required if not _is_attached(name, attached_names)]
+    if missing:
+        return PyRunResult(
+            success=False, required=required, missing=missing, attached=attached_names
+        )
+
+    variables = {
+        &quot;input_dir&quot;: input_dir,
+        &quot;input_files&quot;: input_files,
+        &quot;input_path&quot;: input_files[0] if input_files else None,
+        &quot;output_dir&quot;: output_dir,
+        &quot;user_input&quot;: user_input,
+    }
+    result = execute_code(code, variables, output_dir, error_label=&quot;貼り付けた Python プログラム&quot;)
+    return PyRunResult(
+        success=result.success,
+        log=result.log,
+        output_files=result.output_files,
+        required=required,
+        attached=attached_names,
+    )
+</pre></div>
+</section>
+<section class="file" id="f11">
+  <div class="fhead">
+    <div>
+      <div class="fpath">core_logic/notebook.py</div>
+      <div class="fdesc">Jupyter 風レポートの組み立て</div>
+    </div>
+    <div class="fmeta"><span class="lang python">python</span><span class="lines">193 行</span></div>
+  </div>
+  <div class="codewrap"><pre class="code" data-lang="python">&quot;&quot;&quot;Jupyter Lab 風のレポート表示。資金計画にも汎用 Python 実行にも使う共通部分。
+
+ここは資金計画に依存しないので、Python 実行だけのプラグインにもそのまま入る。
+&quot;&quot;&quot;
+
+from __future__ import annotations
+
+import html
+from pathlib import Path
+
+HTML_MIME = &quot;text/html&quot;
+
+def mime_for(name: str) -&gt; str:
+    &quot;&quot;&quot;ファイル名の拡張子から MIME タイプを決める(ダウンロード用)。&quot;&quot;&quot;
+    suffix = Path(name).suffix.lower()
+    return {
+        &quot;.xlsx&quot;: &quot;application/vnd.openxmlformats-officedocument.spreadsheetml.sheet&quot;,
+        &quot;.xlsm&quot;: &quot;application/vnd.openxmlformats-officedocument.spreadsheetml.sheet&quot;,
+        &quot;.csv&quot;: &quot;text/csv&quot;,
+        &quot;.txt&quot;: &quot;text/plain&quot;,
+        &quot;.html&quot;: &quot;text/html&quot;,
+        &quot;.json&quot;: &quot;application/json&quot;,
+        &quot;.pdf&quot;: &quot;application/pdf&quot;,
+        &quot;.png&quot;: &quot;image/png&quot;,
+        &quot;.jpg&quot;: &quot;image/jpeg&quot;,
+    }.get(suffix, &quot;application/octet-stream&quot;)
+
+
+def python_run_markdown(title: str, success: bool, log: str, output_files: list[str],
+                        attached: list[str]) -&gt; str:
+    &quot;&quot;&quot;汎用 Python 実行のチャット返信用テキスト。&quot;&quot;&quot;
+    lines = [f&quot;## {title}&quot;, &quot;&quot;]
+    if attached:
+        lines.append(&quot;- 入力ファイル: &quot; + &quot;, &quot;.join(attached))
+    lines.append(&quot;- 結果: &quot; + (&quot;実行成功&quot; if success else &quot;**エラーあり**(下のログ参照)&quot;))
+    lines += [&quot;&quot;, &quot;### print 出力&quot;, &quot;&quot;, &quot;```&quot;, log.rstrip(&quot;\n&quot;) or &quot;(出力なし)&quot;, &quot;```&quot;]
+    if output_files:
+        lines += [&quot;&quot;, &quot;### 出力ファイル&quot;, &quot;&quot;]
+        lines += [f&quot;- {name}&quot; for name in output_files]
+    return &quot;\n&quot;.join(lines)
+
+
+def python_run_html(title: str, success: bool, code: str, log: str,
+                    output_files: list[str], attached: list[str]) -&gt; str:
+    &quot;&quot;&quot;汎用 Python 実行の Jupyter Lab 風レポート(ダウンロード用 HTML)。&quot;&quot;&quot;
+    status = (
+        &#x27;&lt;span class=&quot;badge ok&quot;&gt;実行成功&lt;/span&gt;&#x27;
+        if success
+        else &#x27;&lt;span class=&quot;badge ng&quot;&gt;エラーあり&lt;/span&gt;&#x27;
+    )
+    rows = &quot;&quot;
+    if attached:
+        rows = &quot;&lt;tr&gt;&lt;th&gt;入力ファイル&lt;/th&gt;&lt;td&gt;&quot; + html.escape(&quot;, &quot;.join(attached)) + &quot;&lt;/td&gt;&lt;/tr&gt;&quot;
+    files = &quot;\n&quot;.join(
+        f&#x27;&lt;li&gt;&lt;span class=&quot;xl&quot;&gt;X&lt;/span&gt;{html.escape(name)}&lt;/li&gt;&#x27; for name in output_files
+    ) or &#x27;&lt;li style=&quot;border:none;background:none&quot;&gt;(出力ファイルなし)&lt;/li&gt;&#x27;
+    return _PY_HTML_TEMPLATE.format(
+        title=html.escape(title),
+        status=status,
+        rows=rows,
+        code=html.escape(code),
+        log=html.escape(log.rstrip(&quot;\n&quot;) or &quot;(出力なし)&quot;),
+        files=files,
+    ).replace(&quot;__CSS__&quot;, NB_CSS)
+
+
+
+_PY_HTML_TEMPLATE = &quot;&quot;&quot;&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;ja&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;utf-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
+&lt;title&gt;{title}&lt;/title&gt;
+&lt;style&gt;__CSS__&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;div class=&quot;nb&quot;&gt;
+  &lt;header&gt;
+    &lt;h1&gt;{title}&lt;/h1&gt;
+    {status}
+    &lt;span class=&quot;meta&quot;&gt;Python 実行 / Dify&lt;/span&gt;
+  &lt;/header&gt;
+
+  &lt;div class=&quot;cell on&quot; style=&quot;opacity:1&quot;&gt;
+    &lt;div class=&quot;prompt&quot;&gt;&amp;nbsp;&lt;/div&gt;
+    &lt;div class=&quot;body md&quot;&gt;&lt;table class=&quot;df&quot;&gt;{rows}&lt;/table&gt;&lt;/div&gt;
+  &lt;/div&gt;
+
+  &lt;div class=&quot;cell&quot; style=&quot;opacity:1&quot;&gt;
+    &lt;div class=&quot;prompt&quot;&gt;In&amp;nbsp;[1]:&lt;/div&gt;
+    &lt;div class=&quot;body&quot;&gt;&lt;pre class=&quot;code&quot;&gt;{code}&lt;/pre&gt;&lt;/div&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;cell&quot; style=&quot;opacity:1&quot;&gt;
+    &lt;div class=&quot;prompt&quot;&gt;&amp;nbsp;&lt;/div&gt;
+    &lt;div class=&quot;body&quot;&gt;&lt;pre class=&quot;stream&quot;&gt;{log}&lt;/pre&gt;&lt;/div&gt;
+  &lt;/div&gt;
+
+  &lt;div class=&quot;cell&quot; style=&quot;opacity:1&quot;&gt;
+    &lt;div class=&quot;prompt&quot;&gt;&amp;nbsp;&lt;/div&gt;
+    &lt;div class=&quot;body md&quot;&gt;
+      &lt;h2&gt;出力ファイル&lt;/h2&gt;
+      &lt;ul class=&quot;files&quot;&gt;{files}&lt;/ul&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+
+  &lt;footer&gt;
+    このレポートは Dify 上の Python 実行アプリが出力したものです。
+    ファイル本体はチャットの返信からダウンロードしてください。
+  &lt;/footer&gt;
+&lt;/div&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+&quot;&quot;&quot;
+
+NB_CSS = &quot;&quot;&quot;  :root {
+    --prompt: #307fc1;
+    --border: #e0e0e0;
+    --cell-bg: #f7f7f7;
+    --text: #212121;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: #fff; color: var(--text);
+    font-family: -apple-system, &quot;Hiragino Kaku Gothic ProN&quot;, &quot;Yu Gothic&quot;, Meiryo, sans-serif;
+    font-size: 14px; line-height: 1.6;
+  }
+  .nb { max-width: 980px; margin: 0 auto; padding: 24px 20px 60px; }
+  header {
+    display: flex; align-items: center; gap: 12px;
+    border-bottom: 1px solid var(--border); padding-bottom: 14px; margin-bottom: 22px;
+  }
+  header h1 { font-size: 17px; margin: 0; font-weight: 600; }
+  .badge {
+    font-size: 12px; padding: 2px 10px; border-radius: 11px; font-weight: 600;
+  }
+  .badge.ok { color: #1b5e20; background: #e8f5e9; border: 1px solid #a5d6a7; }
+  .badge.ng { color: #b71c1c; background: #ffebee; border: 1px solid #ef9a9a; }
+  header .meta { margin-left: auto; font-size: 12px; color: #757575; }
+
+  .cell { display: flex; gap: 10px; margin-bottom: 6px; align-items: flex-start; }
+  .prompt {
+    flex: none; width: 74px; text-align: right; padding-top: 7px;
+    font-family: &quot;SFMono-Regular&quot;, Menlo, Consolas, monospace;
+    font-size: 12.5px; color: var(--prompt); user-select: none;
+  }
+  .prompt.out { color: #d84315; }
+  .body { flex: 1; min-width: 0; }
+  pre.code {
+    margin: 0; padding: 9px 13px; background: var(--cell-bg);
+    border: 1px solid var(--border); border-radius: 3px;
+    font-family: &quot;SFMono-Regular&quot;, Menlo, Consolas, monospace;
+    font-size: 12.5px; line-height: 1.55; overflow-x: auto;
+    color: #1a1a1a;
+  }
+  pre.stream {
+    margin: 0; padding: 7px 13px; background: #fff;
+    font-family: &quot;SFMono-Regular&quot;, Menlo, Consolas, monospace;
+    font-size: 12.5px; line-height: 1.6; overflow-x: auto;
+    white-space: pre-wrap; word-break: break-word; color: #1a1a1a;
+  }
+  .md { padding: 2px 0 10px; }
+  .md h2 { font-size: 15px; margin: 18px 0 8px; font-weight: 600; }
+  table.df {
+    border-collapse: collapse; font-size: 13px; margin: 4px 0 10px;
+  }
+  table.df th, table.df td {
+    border: 1px solid var(--border); padding: 5px 14px; text-align: left;
+  }
+  table.df th { background: #fafafa; font-weight: 600; white-space: nowrap; }
+  ul.files { list-style: none; padding: 0; margin: 4px 0 0; }
+  ul.files li {
+    display: flex; align-items: center; gap: 9px; padding: 7px 12px;
+    border: 1px solid var(--border); border-radius: 4px; margin-bottom: 6px;
+    background: #fafafa; font-size: 13px;
+  }
+  .xl {
+    flex: none; width: 22px; height: 22px; border-radius: 4px; background: #1d6f42;
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: bold;
+  }
+  .warn {
+    background: #fff8e1; border-left: 3px solid #ffb300; padding: 7px 12px;
+    font-size: 13px; margin: 8px 0;
+  }
+  footer {
+    margin-top: 34px; padding-top: 14px; border-top: 1px solid var(--border);
+    font-size: 11.5px; color: #9e9e9e;
+  }
+  @media (max-width: 640px) {
+    .prompt { width: 52px; font-size: 11px; }
+    .nb { padding: 16px 12px 40px; }
+  }&quot;&quot;&quot;
+
+</pre></div>
+</section>
+<section class="file" id="f12">
+  <div class="fhead">
+    <div>
+      <div class="fpath">core_logic/__init__.py</div>
+      <div class="fdesc">空ファイル</div>
+    </div>
+    <div class="fmeta"><span class="lang python">python</span><span class="lines">0 行</span></div>
+  </div>
+  <div class="codewrap"><pre class="code" data-lang="python"><span class="empty">(空のファイル)</span></pre></div>
+</section>
+<section class="file" id="f13">
+  <div class="fhead">
+    <div>
+      <div class="fpath">_assets/icon.svg</div>
+      <div class="fdesc">プラグインのアイコン</div>
+    </div>
+    <div class="fmeta"><span class="lang text">text</span><span class="lines">9 行</span></div>
+  </div>
+  <div class="codewrap"><pre class="code" data-lang="text">&lt;svg xmlns=&quot;http://www.w3.org/2000/svg&quot; viewBox=&quot;0 0 48 48&quot; width=&quot;48&quot; height=&quot;48&quot;&gt;
+  &lt;rect x=&quot;4&quot; y=&quot;4&quot; width=&quot;40&quot; height=&quot;40&quot; rx=&quot;8&quot; fill=&quot;#f5b93c&quot;/&gt;
+  &lt;rect x=&quot;10&quot; y=&quot;12&quot; width=&quot;28&quot; height=&quot;4&quot; rx=&quot;2&quot; fill=&quot;#ffffff&quot; opacity=&quot;0.95&quot;/&gt;
+  &lt;rect x=&quot;10&quot; y=&quot;20&quot; width=&quot;20&quot; height=&quot;4&quot; rx=&quot;2&quot; fill=&quot;#ffffff&quot; opacity=&quot;0.8&quot;/&gt;
+  &lt;rect x=&quot;10&quot; y=&quot;28&quot; width=&quot;24&quot; height=&quot;4&quot; rx=&quot;2&quot; fill=&quot;#ffffff&quot; opacity=&quot;0.8&quot;/&gt;
+  &lt;path d=&quot;M11 36 L15 39.5 L11 43&quot; fill=&quot;none&quot; stroke=&quot;#7a5410&quot;
+        stroke-width=&quot;2.6&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot;/&gt;
+  &lt;rect x=&quot;18&quot; y=&quot;40.4&quot; width=&quot;14&quot; height=&quot;2.6&quot; rx=&quot;1.3&quot; fill=&quot;#7a5410&quot;/&gt;
+&lt;/svg&gt;
+</pre></div>
+</section>
+<h2 class="grouphead" id="g1">アプリ(Dify にインポートする DSL)</h2>
+<p class="groupnote">画面と流れの定義。プラグイン本体には含まれません。</p>
+<section class="file" id="f14">
+  <div class="fhead">
+    <div>
+      <div class="fpath">python_runner_chatflow.yml</div>
+      <div class="fdesc">Python 実行アプリ(チャット画面)</div>
+    </div>
+    <div class="fmeta"><span class="lang yaml">yaml</span><span class="lines">161 行</span></div>
+  </div>
+  <div class="codewrap"><pre class="code" data-lang="yaml">app:
+  description: &gt;-
+    ワークフローの環境変数 PYTHON_CODE に貼り付けた Python プログラムを、
+    チャットに添付したファイルを入力として実行します(Jupyter Lab の代替)。
+    必要なファイルが足りないときは「添付してください」と聞き返します。
+    実行後は Jupyter 風のレポートと出力ファイルをダウンロードできます。
+  icon: 🐍
+  icon_background: &#x27;#FEF3C7&#x27;
+  mode: advanced-chat
+  name: Python 実行(Jupyter 代替)
+  use_icon_as_answer_icon: false
+kind: app
+version: 0.1.5
+workflow:
+  conversation_variables: []
+  environment_variables:
+    - description: &gt;-
+        実行する Python プログラムをここに丸ごと貼り付ける。コードはプラグイン内で
+        のみ実行され、外部には送信されない。先頭に「# 入力ファイル: ○○.xlsx」と
+        書くと、添付が足りないときにチャットで聞き返すようになる。
+      name: PYTHON_CODE
+      selector:
+        - env
+        - PYTHON_CODE
+      value: &#x27;&#x27;
+      value_type: string
+  features:
+    file_upload:
+      allowed_file_extensions:
+        - .xlsx
+        - .xlsm
+        - .csv
+        - .txt
+        - .json
+      allowed_file_types:
+        - custom
+      allowed_file_upload_methods:
+        - local_file
+      enabled: true
+      number_limits: 10
+    opening_statement: &gt;-
+      Python プログラムを実行します。入力ファイルを添付して送信してください。
+      (どのファイルが必要かは、何も付けずに送信すると教えます)
+    retriever_resource:
+      enabled: false
+    sensitive_word_avoidance:
+      enabled: false
+    speech_to_text:
+      enabled: false
+    suggested_questions: []
+    suggested_questions_after_answer:
+      enabled: false
+    text_to_speech:
+      enabled: false
+      language: &#x27;&#x27;
+      voice: &#x27;&#x27;
+  graph:
+    edges:
+      - data:
+          isInIteration: false
+          sourceType: start
+          targetType: tool
+        id: start-source-tool-target
+        source: start
+        sourceHandle: source
+        target: tool
+        targetHandle: target
+        type: custom
+        zIndex: 0
+      - data:
+          isInIteration: false
+          sourceType: tool
+          targetType: answer
+        id: tool-source-answer-target
+        source: tool
+        sourceHandle: source
+        target: answer
+        targetHandle: target
+        type: custom
+        zIndex: 0
+    nodes:
+      - data:
+          desc: &#x27;&#x27;
+          selected: false
+          title: 開始
+          type: start
+          variables: []
+        height: 54
+        id: start
+        position:
+          x: 80
+          y: 282
+        positionAbsolute:
+          x: 80
+          y: 282
+        selected: false
+        sourcePosition: right
+        targetPosition: left
+        type: custom
+        width: 244
+      - data:
+          desc: PYTHON_CODE のプログラムを、添付ファイルを入力として実行(python_runner プラグイン)
+          is_team_authorization: false
+          provider_id: okadamasayuki/python_runner/python_runner
+          provider_name: okadamasayuki/python_runner/python_runner
+          provider_type: builtin
+          selected: false
+          title: Python を実行
+          tool_configurations: {}
+          tool_label: Python を実行
+          tool_name: run_python
+          tool_parameters:
+            code:
+              type: mixed
+              value: &#x27;{{#env.PYTHON_CODE#}}&#x27;
+            files:
+              type: variable
+              value:
+                - sys
+                - files
+            user_text:
+              type: mixed
+              value: &#x27;{{#sys.query#}}&#x27;
+          type: tool
+        height: 168
+        id: tool
+        position:
+          x: 420
+          y: 282
+        positionAbsolute:
+          x: 420
+          y: 282
+        selected: false
+        sourcePosition: right
+        targetPosition: left
+        type: custom
+        width: 244
+      - data:
+          answer: &#x27;{{#tool.text#}}&#x27;
+          desc: &#x27;&#x27;
+          selected: false
+          title: 回答
+          type: answer
+          variables: []
+        height: 102
+        id: answer
+        position:
+          x: 760
+          y: 282
+        positionAbsolute:
+          x: 760
+          y: 282
+        selected: false
+        sourcePosition: right
+        targetPosition: left
+        type: custom
+        width: 244
+    viewport:
+      x: 0
+      y: 0
+      zoom: 1
+</pre></div>
+</section></main>
+</div>
+</div>
+
+<script>
+// --- 簡易ハイライト(コメント・文字列・キーワードのみ) ---
+const PY_KW = new Set(("def class return if elif else for while in not and or is None True False "
+  + "import from as try except finally raise with yield lambda pass break continue global "
+  + "nonlocal assert del await async").split(" "));
+
+function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+
+function highlightPython(src){
+  const parts = [];
+  // 文字列とコメントを先に確定させる(文字列内の # を誤検出しないため)
+  // \x22 = " / \x27 = ' (Python 側の文字列を壊さないためエスケープ表記)
+  const re = new RegExp(
+    '(\\x22\\x22\\x22[\\s\\S]*?\\x22\\x22\\x22'
+    + '|\\x27\\x27\\x27[\\s\\S]*?\\x27\\x27\\x27'
+    + '|\\x22(?:[^\\x22\\\\\\n]|\\\\.)*\\x22'
+    + '|\\x27(?:[^\\x27\\\\\\n]|\\\\.)*\\x27'
+    + '|#[^\\n]*)', 'g');
+  let last = 0, m;
+  while ((m = re.exec(src)) !== null) {
+    parts.push({t:"plain", v:src.slice(last, m.index)});
+    parts.push({t:m[0][0] === "#" ? "cm" : "st", v:m[0]});
+    last = m.index + m[0].length;
+  }
+  parts.push({t:"plain", v:src.slice(last)});
+  return parts.map(p => {
+    if (p.t === "plain") {
+      return esc(p.v).replace(/\b[A-Za-z_]\w*\b/g,
+        w => PY_KW.has(w) ? '<span class="kw">' + w + "</span>" : w);
+    }
+    return '<span class="' + p.t + '">' + esc(p.v) + "</span>";
+  }).join("");
+}
+
+function highlightYaml(src){
+  return src.split("\n").map(line => {
+    const hash = line.indexOf("#");
+    if (hash >= 0 && line.slice(0, hash).trim() === "")
+      return '<span class="cm">' + esc(line) + "</span>";
+    const m = line.match(/^(\s*-?\s*)([A-Za-z_][\w.\-]*)(:)(.*)$/);
+    if (m) return esc(m[1]) + '<span class="yk">' + esc(m[2]) + "</span>" + esc(m[3]) + esc(m[4]);
+    return esc(line);
+  }).join("\n");
+}
+
+document.querySelectorAll("pre.code").forEach(pre => {
+  const src = pre.textContent;
+  if (!src.trim() && pre.querySelector(".empty")) return;
+  const lang = pre.dataset.lang;
+  const painted = lang === "python" ? highlightPython(src)
+                : lang === "yaml" ? highlightYaml(src) : esc(src);
+  // 行番号を付ける
+  pre.innerHTML = painted.split("\n").map((line, i) =>
+    '<span class="row"><span class="ln">' + (i + 1) + "</span>" + (line || " ") + "</span>"
+  ).join("");
+});
+
+// --- ファイル名で絞り込み ---
+const q = document.getElementById("q");
+q.addEventListener("input", () => {
+  const term = q.value.trim().toLowerCase();
+  document.querySelectorAll("a.navlink").forEach(a => {
+    a.classList.toggle("hide", term !== "" &&
+      !a.querySelector(".nf").textContent.toLowerCase().includes(term));
+  });
+});
+</script>
+
+</body>
+</html>
