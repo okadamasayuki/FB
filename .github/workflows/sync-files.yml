@@ -23,8 +23,11 @@ jobs:
       - id: sync
         run: node scripts/sync-files.mjs
         env:
-          # 公開リポジトリなら未設定でよい。元リポジトリが非公開になったら
-          # Contents:Read の PAT を SYNC_TOKEN シークレットに入れる。
+          # 公開リポジトリはこれで足りる。未認証で raw を叩くと共有 IP の
+          # レート制限（429）を踏んでジョブごと落ちるので、必ず認証する。
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # 非公開リポジトリを取りに行くときだけ、Contents:Read の PAT を
+          # SYNC_TOKEN シークレットに入れる。
           SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
 
       - name: Commit
