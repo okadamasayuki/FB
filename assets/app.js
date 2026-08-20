@@ -161,7 +161,7 @@ async function loadSources() {
     }
     return lines.join('\n');
   } catch {
-    return '';
+    return null;   // 読めなかった。取得元が 0 件なのとは区別する
   }
 }
 
@@ -172,7 +172,12 @@ async function loadSources() {
 function wireUp() {
   on('#btn-settings', 'click', async () => {
     const box = $('#sources');
-    if (box) box.value = await loadSources() || '（取得元が読み込めませんでした）';
+    if (box) {
+      const lines = await loadSources();
+      box.value = lines === null
+        ? '（取得元を読み込めませんでした）'
+        : lines || '（自動更新は設定されていません）';
+    }
     $('#settings-dialog')?.showModal();
   });
 

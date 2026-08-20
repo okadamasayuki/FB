@@ -47,7 +47,11 @@ owner/repo/フォルダ/ファイル名
 
 ## 自動同期のしくみ
 
-`.github/workflows/sync-files.yml` が毎時 15 分に動きます。
+**いまは取得元が空なので、定時実行は止めています。** `data/sync.json` に取得元を
+足したら、`.github/workflows/sync-files.yml` の `schedule` を戻して毎時動かします。
+手動実行（Actions タブの *Sync files from source repos*）はいつでもできます。
+
+以下は取得元がある場合の動きです。
 
 1. `data/sync.json` に書かれた場所からファイルを取得
 2. 中身が変わっていれば `files/` を更新し、`data/files.json` の日付を書き換え

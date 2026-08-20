@@ -1,9 +1,8 @@
 name: Sync files from source repos
 
+# 取得元が空のあいだは定時実行しない。data/sync.json に取得元を足したら
+# schedule を戻して毎時動かす。手動実行はいつでもできる。
 on:
-  schedule:
-    # 毎時 15 分に元リポジトリを見に行く（UTC 指定だが毎時なので時差は無関係）
-    - cron: '15 * * * *'
   workflow_dispatch:
 
 concurrency:
