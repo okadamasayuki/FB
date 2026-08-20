@@ -17,70 +17,80 @@
       "name": "sandbox_check_workflow.yml",
       "size": 6698,
       "uploadedAt": "2026-08-05T14:28:22+09:00",
-      "note": "【まず最初に】コードノードの実行環境チェック（プラグイン不要）"
+      "note": "【まず最初に】コードノードの実行環境チェック（プラグイン不要）",
+      "sourceSha": "4837849d5248380341e3b359058c1897640b9c79"
     },
     {
       "path": "files/python_runner.difypkg",
       "name": "python_runner.difypkg",
       "size": 12207,
       "uploadedAt": "2026-08-05T14:28:23+09:00",
-      "note": "【Python実行】プラグイン（pandas/numpy/openpyxl のみ・12KB）"
+      "note": "【Python実行】プラグイン（pandas/numpy/openpyxl のみ・12KB）",
+      "sourceSha": "ed4ecbd574c04e93bc5ca468e9982c324b3b4d19"
     },
     {
       "path": "files/python_runner_chatflow.yml",
       "name": "python_runner_chatflow.yml",
       "size": 4523,
       "uploadedAt": "2026-08-05T14:28:23+09:00",
-      "note": "【Python実行】アプリ / Jupyter 代替（DSL インポート）"
+      "note": "【Python実行】アプリ / Jupyter 代替（DSL インポート）",
+      "sourceSha": "0f06c6e1e81f3c8bab87d7d4a1dd5b031bf7dcf0"
     },
     {
       "path": "files/plan_automation.difypkg",
       "name": "plan_automation.difypkg",
       "size": 41576,
       "uploadedAt": "2026-08-05T14:28:23+09:00",
-      "note": "【資金計画】プラグイン（最初に1回だけインストール）"
+      "note": "【資金計画】プラグイン（最初に1回だけインストール）",
+      "sourceSha": "f5866c062e6abefa48ff8de87e68f35e366fc42e"
     },
     {
       "path": "files/plan_automation_workflow.yml",
       "name": "plan_automation_workflow.yml",
       "size": 5392,
       "uploadedAt": "2026-08-04T21:20:00+09:00",
-      "note": "【資金計画】アプリ（DSL インポート）"
+      "note": "【資金計画】アプリ（DSL インポート）",
+      "sourceSha": "e74eb19c5caf34c6921a9f49469b4548202d1536"
     },
     {
       "path": "files/setup_guide.html",
       "name": "setup_guide.html",
       "size": 28925,
       "uploadedAt": "2026-08-05T14:28:23+09:00",
-      "note": "導入ガイド（ブラウザで開ける・安全性の根拠つき）"
+      "note": "導入ガイド（ブラウザで開ける・安全性の根拠つき）",
+      "sourceSha": "aa3c1a0fb9d517be264541194a1c943eb70e32cb"
     },
     {
       "path": "files/source_viewer_python.html",
       "name": "source_viewer_python.html",
       "size": 48634,
       "uploadedAt": "2026-08-05T14:28:23+09:00",
-      "note": "【Python実行】ソース全文（13 ファイル・621 行）"
+      "note": "【Python実行】ソース全文（13 ファイル・621 行）",
+      "sourceSha": "7c2f57829ea38200b8221301e387a68849b33063"
     },
     {
       "path": "files/source_viewer.html",
       "name": "source_viewer.html",
       "size": 142496,
       "uploadedAt": "2026-08-05T14:28:23+09:00",
-      "note": "【資金計画】ソース全文（23 ファイル）"
+      "note": "【資金計画】ソース全文（23 ファイル）",
+      "sourceSha": "4d586ee7c9e082b9ce716ca048ee277522e92901"
     },
     {
       "path": "files/sample_source_R7.xlsx",
       "name": "sample_source_R7.xlsx",
       "size": 134385,
       "uploadedAt": "2026-08-05T14:28:23+09:00",
-      "note": "動作確認用のダミー元データ（月別シート R704〜R803）"
+      "note": "動作確認用のダミー元データ（月別シート R704〜R803）",
+      "sourceSha": "f820c8f68002158955143b92640d932cb0fdb24e"
     },
     {
       "path": "files/手順書_資金実績まとめ.txt",
       "name": "手順書_資金実績まとめ.txt",
       "size": 2006,
       "uploadedAt": "2026-08-05T14:28:23+09:00",
-      "note": "動作確認用の手順書サンプル"
+      "note": "動作確認用の手順書サンプル",
+      "sourceSha": "e468fdf7fa22e9321da29159d0204dec321fda14"
     }
   ]
 }
