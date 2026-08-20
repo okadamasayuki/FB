@@ -8,15 +8,12 @@
 <title>FB</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%238a9199'/%3E%3C/svg%3E">
 <!-- ?v= はキャッシュ避け。assets/ を変えたら必ず上げる（古い CSS と新しい JS が混ざるのを防ぐ） -->
-<link rel="stylesheet" href="./assets/style.css?v=8">
+<link rel="stylesheet" href="./assets/style.css?v=9">
 </head>
 <body>
 
 <header class="app-bar">
   <h1>FB</h1>
-  <div class="bar-actions">
-    <button id="btn-settings" class="icon-btn" type="button" title="設定" aria-label="設定">⚙</button>
-  </div>
 </header>
 
 <main>
@@ -25,20 +22,6 @@
   <p id="load-status" class="load-status"></p>
 </main>
 
-<dialog id="settings-dialog">
-  <form method="dialog" class="dialog-head">
-    <h2>設定</h2>
-    <button class="icon-btn" value="close" aria-label="閉じる">✕</button>
-  </form>
-
-  <div class="dialog-body">
-    <section>
-      <h3>取得元</h3>
-      <textarea id="sources" rows="6" spellcheck="false" readonly></textarea>
-    </section>
-  </div>
-</dialog>
-
-<script src="./assets/app.js?v=8"></script>
+<script src="./assets/app.js?v=9"></script>
 </body>
 </html>

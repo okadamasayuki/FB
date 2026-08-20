@@ -4,16 +4,12 @@
  * ファイルの実体はこのサイト自身が配っている（files/ 配下）。
  * 外部のホストは一切参照しないので、このページが開ける環境なら必ず落とせる。
  *
- * 画面から消す操作は持たない。減らすときはリポジトリ側から実体ごと消す。
+ * 増やす・減らす・差し替えるのは、すべてリポジトリ側を直して行う。
+ * 画面には操作を持たせない。
  */
 'use strict';
 
 const FILES_URL = './data/files.json';
-const SOURCES_URL = './data/sync.json';
-
-/* ============================================================
- * ユーティリティ
- * ========================================================== */
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const el = (tag, cls) => {
@@ -21,19 +17,6 @@ const el = (tag, cls) => {
   if (cls) node.className = cls;
   return node;
 };
-
-/**
- * 要素が見つからなくても、そこで初期化全体を止めない。
- * HTML と JS の版がずれたときに、ページごと無反応になるのを防ぐ。
- */
-function on(selector, type, handler) {
-  const node = $(selector);
-  if (!node) {
-    console.warn(`${selector} が見つかりません`);
-    return;
-  }
-  node.addEventListener(type, handler);
-}
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -70,21 +53,6 @@ function formatDate(iso) {
   return Number.isNaN(d.getTime()) ? '' : dateFmt.format(d);
 }
 
-/* ============================================================
- * 描画
- * ========================================================== */
-
-function render(files) {
-  const list = $('#files');
-  if (!list) return;
-
-  list.textContent = '';
-  for (const file of files) list.appendChild(renderRow(file));
-
-  const empty = $('#empty-state');
-  if (empty) empty.hidden = files.length > 0;
-}
-
 function renderRow(file) {
   const row = el('div', 'file');
 
@@ -113,9 +81,16 @@ function renderRow(file) {
   return row;
 }
 
-/* ============================================================
- * 読み込み
- * ========================================================== */
+function render(files) {
+  const list = $('#files');
+  if (!list) return;
+
+  list.textContent = '';
+  for (const file of files) list.appendChild(renderRow(file));
+
+  const empty = $('#empty-state');
+  if (empty) empty.hidden = files.length > 0;
+}
 
 async function loadFiles() {
   const status = $('#load-status');
@@ -149,40 +124,6 @@ async function loadFiles() {
   render(files);
 }
 
-/** 設定画面に出す「取得元」を data/sync.json から組み立てる */
-async function loadSources() {
-  try {
-    const res = await fetch(`${SOURCES_URL}?v=${Date.now()}`, { cache: 'no-store' });
-    if (!res.ok) throw new Error(String(res.status));
-    const data = await res.json();
-    const lines = [];
-    for (const source of data.sources || []) {
-      for (const spec of source.files || []) lines.push(`${source.repo}/${spec.from}`);
-    }
-    return lines.join('\n');
-  } catch {
-    return null;   // 読めなかった。取得元が 0 件なのとは区別する
-  }
-}
-
-/* ============================================================
- * 起動
- * ========================================================== */
-
-function wireUp() {
-  on('#btn-settings', 'click', async () => {
-    const box = $('#sources');
-    if (box) {
-      const lines = await loadSources();
-      box.value = lines === null
-        ? '（取得元を読み込めませんでした）'
-        : lines || '（自動更新は設定されていません）';
-    }
-    $('#settings-dialog')?.showModal();
-  });
-
-}
-
 function init() {
   // 旧版が端末に残した設定を片付ける
   try {
@@ -191,7 +132,6 @@ function init() {
     }
   } catch { /* noop */ }
 
-  wireUp();
   loadFiles();
 }
 
