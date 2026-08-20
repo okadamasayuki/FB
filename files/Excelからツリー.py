@@ -90,6 +90,51 @@
 ### ステップ5: 出力する
 
 問題がなければ、2つのツリーを**そのままコピーできる形**(コードブロック)で出力してください。
+
+**7桁ツリーも、10桁ツリーとまったく同じ「罫線つきのツリー」の形で出してください。**
+
+### 正しい出力の形(7桁ツリー)
+
+```
+区分判定(1段目)
+├─ 流動資産
+│   ├─ 現預金・有価証券・貸付金
+│   │   ├─ 現金・預金   [1101001]
+│   │   └─ 有価証券     [1101002]
+│   └─ 営業債権・その他の債権
+│       ├─ 受取手形     [1102001]
+│       └─ 売掛金       [1102002]
+└─ 営業費用
+    └─ 経費
+        ├─ 交際費       [5102002]
+        └─ 会議費       [5102003]
+```
+
+### 間違った出力の形(絶対にこうしないこと)
+
+```
+1101001
+1101002
+1102001
+1102002
+...
+```
+
+7桁コードだけを並べた一覧は**完全な誤り**です。7桁ツリーは
+「10桁ツリーから、コードの上7桁が同じになる段まで枝を刈り込んだもの」であり、
+**枝分かれの形は10桁ツリーと同じ**です(末端が浅くなるだけです)。
+
+### 出力する前の自己チェック(必ず行う)
+
+出力しようとしている7桁ツリーについて、次を確認してください。
+1つでも当てはまらなければ**間違いなので作り直す**こと。
+
+- [ ] 1行目が `区分判定(1段目)` になっている
+- [ ] `├─` `└─` `│` の罫線が使われている
+- [ ] **各行に日本語の科目名(ラベル)がある**(数字だけの行が1つもない)
+- [ ] 10桁ツリーと**同じ枝分かれ**になっている(上の方の階層が一致する)
+- [ ] 最終ラベルの数が、10桁ツリーの最終ラベル数**以下**になっている
+
 ツリーの見方も一言添えてください:
 
 - 配下が無い行が最終ラベル(そこで判定が終わる)
@@ -97,9 +142,13 @@
 
 ## Pythonを実行できない環境の場合
 
-コードを実行できないときは、**その旨を最初に伝えたうえで**、同じ処理を手作業で行ってください。
-その際も上記の検算(件数の報告)は必ず行い、件数が合わない場合は必ず確認すること。
-行数が多くて全部は扱えない場合は、「〇〇行あるので分割して進めます」と伝えてから進めること。
+コードを実行できないときは、**まず最初に「このコードを実行できないので、手作業で同じ処理を行います」と
+はっきり伝えてください**(黙って手作業に切り替えないこと)。
+
+手作業で行う場合も、**出力の形は上の「正しい出力の形」と完全に同じ**にしてください。
+罫線つきのツリーであること、各行に科目名があることを必ず守り、
+上記の自己チェックと件数の報告も必ず行ってください。
+行数が多くて一度に扱えない場合は、「〇〇行あるので分割して進めます」と伝えてから進めること。
 
 ## 変換のルール(プログラムが行っている処理)
 
@@ -378,6 +427,56 @@ def prune_to_prefix(root, split):
     return out
 
 
+def duplicate_branch_names(root):
+    """同じ名前の「分岐」が別の場所にもある場合を検出する
+    (Difyワークフローを作る段階で、分岐名は全体で一意である必要があるため)"""
+    seen = {}
+    for n in iter_all(root):
+        if not n.leaf:
+            seen.setdefault(n.label, []).append('/'.join(n.path()))
+    return [(k, v) for k, v in seen.items() if len(v) > 1]
+
+
+def depth_stats(root):
+    """最終ラベルの深さの分布(1=最上段の直下)"""
+    out = {}
+
+    def walk(n, d):
+        for c in n.children:
+            if c.leaf:
+                out[d] = out.get(d, 0) + 1
+            else:
+                walk(c, d + 1)
+    walk(root, 1)
+    return out
+
+
+def merge_same_code(n):
+    """7桁ツリーの整理: 同じコードになる兄弟をまとめ、全部同じなら親を葉にする"""
+    for c in list(n.children):
+        merge_same_code(c)
+    if n.children and all(c.leaf and c.code for c in n.children) \
+            and len(set(c.code for c in n.children)) == 1:
+        n.code = n.children[0].code      # 配下が全部同じコード → この段で確定
+        n.children = []
+        n.index = {}
+        return
+    out, group = [], {}
+    for c in n.children:
+        if c.leaf and c.code and c.code in group:
+            group[c.code].append(c.label)   # 同じコードの兄弟は先頭にまとめる
+            continue
+        out.append(c)
+        if c.leaf and c.code:
+            group[c.code] = [c.label]
+    for c in out:
+        names = group.get(c.code or '', [])
+        if len(names) > 1:
+            c.label = '・'.join(names[:5]) + ('' if len(names) <= 5 else ' ほか%d件' % (len(names) - 5))
+    n.children = out
+    n.index = dict((c.label, c) for c in out)
+
+
 def count_codes(root):
     codes = [n.code for n in iter_all(root) if n.code]
     by_len = {}
@@ -559,6 +658,8 @@ def convert(path, args):
 
     root7 = prune_to_prefix(root2, args.split) if args.split else None
     if root7 is not None:
+        merge_same_code(root7)
+    if root7 is not None:
         with io.open(args.tree7, 'w', encoding='utf-8') as f:
             f.write(header('%d桁(共通部分だけを特定する)' % args.split)
                     + '```\n' + render(root7, args.root) + '\n```\n')
@@ -597,7 +698,13 @@ def convert(path, args):
         t7, by7, dup7 = count_codes(root7)
         print('■ %d桁ツリー: 最終ラベル %d個 / 判定の段 %d個' % (args.split, len(leaves(root7)), len(branches(root7))))
         print('  コード %d個(%s)' % (t7, '、'.join('%d桁 %d個' % (k, v) for k, v in sorted(by7.items()))))
+        d7 = depth_stats(root7)
+        print('  最終ラベルの深さ: %s'
+              % '、'.join('%d段目 %d個' % (k, v) for k, v in sorted(d7.items())))
         print('  → %s' % args.tree7)
+        if d7 and max(d7) <= 1:
+            warn.append('%d桁ツリーが階層構造になっていません(すべて1段目)。'
+                        'ツリーではなく一覧になっているので、列の指定かコードの体系を確認してください' % args.split)
         if dup7:
             warn.append('%d桁ツリーで同じコードが複数の場所にあります(%d種類。例: %s)'
                         % (args.split, len(dup7), '、'.join(dup7[:3])))
@@ -623,6 +730,12 @@ def convert(path, args):
                     '利用区分の値か、列の指定が違う可能性があります' % (total_data, lv10))
     for k, v in conflict[:3]:
         warn.append('経路「%s」に別のコードが付いています(%s と %s)' % (args.sep.join(k), v[0], v[1]))
+    dupname = duplicate_branch_names(root)
+    if dupname:
+        warn.append('同じ名前の中間段階が複数の場所にあります(%d件。例: 「%s」が %s)。'
+                    'このままだとDifyワークフローを作る段階でエラーになるため、'
+                    '名前を変えるか、片方をまとめる必要があります'
+                    % (len(dupname), dupname[0][0], ' と '.join(dupname[0][1][:2])))
     wide = sorted(((len(b.children), '/'.join(b.path())) for b in branches(root)), reverse=True)
     if wide and wide[0][0] > 20:
         print('')
