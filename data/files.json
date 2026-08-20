@@ -91,6 +91,13 @@
       "uploadedAt": "2026-08-05T14:28:23+09:00",
       "note": "動作確認用の手順書サンプル",
       "sourceSha": "e468fdf7fa22e9321da29159d0204dec321fda14"
+    },
+    {
+      "path": "files/Excelからツリー.py",
+      "name": "Excelからツリー.py",
+      "size": 31102,
+      "uploadedAt": "2026-08-20T11:00:24+09:00",
+      "note": "勘定科目マスタ(Excel)→分類ツリー変換ツール"
     }
   ]
 }

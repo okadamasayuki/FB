@@ -176,13 +176,16 @@ async function main() {
       }
       console.log(`${isSame ? '  変更なし' : '  更新    '} ${spec.to} (${bytes.length} bytes)`);
 
+      // ツリーが引けなかった回でも、中身が同じなら前回の SHA を持ち越す。
+      // ここで捨てると次回また全件落とすことになり、レート制限に逆戻りする。
+      const keptSha = sourceSha || (isSame ? existing?.sourceSha : undefined);
       const row = {
         path: spec.to,
         name: path.basename(spec.to),
         size: bytes.length,
         uploadedAt: isSame && existing?.uploadedAt ? existing.uploadedAt : nowJst(),
         note: spec.note || existing?.note || '',
-        ...(sourceSha ? { sourceSha } : {}),
+        ...(keptSha ? { sourceSha: keptSha } : {}),
       };
       if (!row.note) delete row.note;
 
