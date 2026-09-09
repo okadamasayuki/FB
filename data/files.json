@@ -13,25 +13,46 @@
   "note": "このサイトから直接ダウンロードできます",
   "files": [
     {
+      "path": "files/dify-west-src-20260909.zip",
+      "name": "dify-west-src-20260909.zip",
+      "size": 5322471,
+      "uploadedAt": "2026-09-09T10:15:44+09:00",
+      "note": "勘定科目分類ツールの元データ一式(ページの元HTML・生成器・ビルドスクリプト・テスト)。展開して BUILD.md を読む"
+    },
+    {
+      "path": "files/勘定科目分類ツール.html",
+      "name": "勘定科目分類ツール.html",
+      "size": 992779,
+      "uploadedAt": "2026-09-09T10:15:44+09:00",
+      "note": "まとめ版(GitHub Pages と同じもの)。ダブルクリックでそのまま使える"
+    },
+    {
+      "path": "files/BUILD.md",
+      "name": "BUILD.md",
+      "size": 7474,
+      "uploadedAt": "2026-09-09T10:15:44+09:00",
+      "note": "元データの構成とビルド・公開の手順(zipの中と同じ)"
+    },
+    {
       "path": "files/Excelからツリー.py",
       "name": "Excelからツリー.py",
-      "size": 35784,
-      "uploadedAt": "2026-08-20T11:28:22+09:00",
-      "note": "勘定科目マスタ(Excel)→分類ツリー変換ツール"
+      "size": 45159,
+      "uploadedAt": "2026-09-09T10:15:44+09:00",
+      "note": "勘定科目マスタ(Excel)→分類ツリー変換ツール(コマンド版)"
     },
     {
       "path": "files/ツリー検査.py",
       "name": "ツリー検査.py",
-      "size": 15780,
-      "uploadedAt": "2026-08-20T15:51:53+09:00",
-      "note": "分類ツリーの検査・検算ツール"
+      "size": 61720,
+      "uploadedAt": "2026-09-09T10:15:44+09:00",
+      "note": "分類ツリーの検査・検算ツール(コマンド版)"
     },
     {
       "path": "files/ツリーからDify.py",
       "name": "ツリーからDify.py",
-      "size": 66898,
-      "uploadedAt": "2026-08-20T15:51:53+09:00",
-      "note": "分類ツリー→Dify ワークフロー生成ツール"
+      "size": 189761,
+      "uploadedAt": "2026-09-09T10:15:44+09:00",
+      "note": "分類ツリー→Dify DSL生成ツール(コマンド版。--learn / --learn-mode / --all)"
     }
   ]
 }

@@ -190,6 +190,59 @@ def norm(text):
     return text.replace('　', ' ').strip()
 
 
+ZEN2HAN = dict(zip(range(0xff10, 0xff1a), '0123456789'))
+
+
+def norm_code(text):
+    """コード欄の値をそろえる(全角数字→半角、空白・カンマ除去)"""
+    return norm(text).translate(ZEN2HAN).replace(' ', '').replace(',', '').replace('\u3000', '')
+
+
+def parse_count(text):
+    """データ件数の値を整数にする。読めなければ None(見出し行など)"""
+    c = norm(text).translate(ZEN2HAN).replace(',', '').replace(' ', '')
+    if not c:
+        return None
+    try:
+        return int(float(c))
+    except ValueError:
+        return None
+
+
+def read_freq_rows(rows):
+    """「よく使う勘定科目リスト」(A=勘定科目コード / B=科目名 / C=データ件数)を読む。
+    コードが数字でない行・件数が読めない行(見出しなど)は飛ばす。"""
+    entries = []
+    for row in rows:
+        code = norm_code(row[0] if len(row) > 0 else '')
+        label = norm(row[1]) if len(row) > 1 else ''
+        cnt = parse_count(row[2] if len(row) > 2 else '')
+        if not code or not code.isdigit() or cnt is None:
+            continue
+        entries.append((code, label, cnt))
+    return entries
+
+
+def freq_select(entries, fmin, ftop, digits):
+    """条件(件数fmin以上 / 件数の多い順に上位ftop)に該当するコードを選ぶ。
+    返り値は {コード: (件数, 科目名)}。同じコードが複数行あれば件数の大きい方を採る。"""
+    best = {}
+    order = []
+    for code, label, cnt in entries:
+        c = code.zfill(digits) if (digits and len(code) < digits) else code
+        if c not in best:
+            order.append(c)
+            best[c] = (cnt, label)
+        elif cnt > best[c][0]:
+            best[c] = (cnt, label)
+    items = [(c, best[c][0], best[c][1]) for c in order]
+    if fmin:
+        items = [x for x in items if x[1] >= fmin]
+    if ftop:
+        items = sorted(items, key=lambda x: -x[1])[:ftop]
+    return dict((c, (cnt, label)) for c, cnt, label in items)
+
+
 def same_mark(a, b):
     a, b = norm(a), norm(b)
     if len(a) == 1 and len(b) == 1 and a in CIRCLES and b in CIRCLES:
@@ -575,26 +628,35 @@ def preview(path, args):
 
 # ---------------------------------------------------------------- 実行
 
-def convert(path, args):
-    sheet, rows, allsheets = read_table(path, args.sheet)
-    cols = parse_cols(args.cols)
-    start = (args.start_row - 1) if args.start_row else find_start_row(rows, cols)
+def convert_rows(rows, cols, o):
+    """行データ(2次元配列)と列マップから、ツリー・対応表・検算結果を作る。
+
+    ファイルを読む処理から切り離してあるので、CSVやテーブルなど
+    Excel以外の入力からも同じ結果を得られる。
+    o は use / detail_sep / code_digits / split / sep / root / start_row を持つオブジェクト。
+    """
+    start = (getattr(o, 'start_row', 0) - 1) if getattr(o, 'start_row', 0) else find_start_row(rows, cols)
     if start is None:
         raise ToolError('データの開始行が見つかりませんでした。'
                         '「区分1の列に文字があり、コードの列が数字だけ」の行がありません。\n'
                         '→ 利用者に「勘定科目区分1・勘定科目コードはそれぞれ何列ですか?」と確認してください'
                         '(--check を付けて実行すると各列の中身を確認できます)。')
 
-    print('■ シート「%s」/ データ %d行目から' % (sheet, start + 1))
-    print('  読む列: ' + ' / '.join('%s=%s列' % (ROLE_JP[r], letter(cols[r])) for r in ROLES))
-
-    records, skipped, blank, junk, collapsed, split_rows = [], 0, 0, 0, 0, 0
+    exclude = [norm(x) for x in (getattr(o, 'exclude', None) or []) if norm(x)]
+    ex_hits = dict((e, 0) for e in exclude)
+    freq_entries = getattr(o, 'freq_entries', None)
+    freq_allowed = None
+    if freq_entries:
+        freq_allowed = freq_select(freq_entries, getattr(o, 'freq_min', 0) or 0,
+                                   getattr(o, 'freq_top', 0) or 0, o.code_digits or 0)
+    freq_hits, freq_dropped = set(), 0
+    records, skipped, blank, junk, collapsed, split_rows, excluded = [], 0, 0, 0, 0, 0, 0
     carry = {'l1': '', 'l2': ''}
     for row in rows[start:]:
         def get(role):
             j = cols[role]
             return norm(row[j]) if j < len(row) else ''
-        if args.use and not same_mark(get('use'), args.use):
+        if o.use and not same_mark(get('use'), o.use):
             skipped += 1
             continue
         l1, l2, l3, code = get('l1'), get('l2'), get('l3'), get('code')
@@ -617,7 +679,7 @@ def convert(path, args):
         if any(w == l3 or l3.startswith(w) for w in SKIP_WORDS):
             junk += 1
             continue
-        details = [norm(x) for x in re.split('[' + re.escape(args.detail_sep) + ']', l3) if norm(x)]
+        details = [norm(x) for x in re.split('[' + re.escape(o.detail_sep) + ']', l3) if norm(x)]
         if len(details) > 1:
             split_rows += 1
         parts = [l1, l2] + details
@@ -627,16 +689,39 @@ def convert(path, args):
                 path_parts.append(part)
         if len(path_parts) < len([p for p in parts if p]):
             collapsed += 1
+        if exclude:
+            padded_code = code.zfill(o.code_digits) if (code.isdigit() and o.code_digits
+                                                        and len(code) < o.code_digits) else code
+            hit = next((e for e in exclude if e == code or e == padded_code), None) \
+                or next((e for e in exclude if e in path_parts), None)
+            if hit is not None:
+                ex_hits[hit] += 1
+                excluded += 1
+                continue
+        if freq_allowed is not None:
+            cc = norm_code(code)
+            padded = cc.zfill(o.code_digits) if (o.code_digits and cc.isdigit()
+                                                 and len(cc) < o.code_digits) else cc
+            key = padded if padded in freq_allowed else (cc if cc in freq_allowed else None)
+            if key is None:
+                freq_dropped += 1
+                continue
+            freq_hits.add(key)
         records.append((path_parts, code))
 
     total_data = len(rows) - start
+    if not records and freq_allowed is not None:
+        raise ToolError('よく使う科目リストの条件に一致する行が1行もありませんでした'
+                        '(リスト %d科目のうち条件該当 %d科目、マスタとの一致 0件)。\n'
+                        '→ コードの桁数がマスタと合っているか、条件が厳しすぎないかを確認してください。'
+                        % (len(freq_entries), len(freq_allowed)))
     if not records:
         raise ToolError('使える行が1行もありませんでした(%d行を見て、利用区分「%s」に一致する行がありません)。\n'
                         '→ 利用者に「自社で使っている印は何ですか?(○ / 1 / 使用 など)」'
-                        'または「利用区分は何列ですか?」と確認してください。' % (total_data, args.use))
+                        'または「利用区分は何列ですか?」と確認してください。' % (total_data, o.use))
 
     # コードの桁揃え
-    digits = args.code_digits
+    digits = o.code_digits
     padded = 0
     if digits:
         fixed = []
@@ -653,64 +738,26 @@ def convert(path, args):
     add_self_leaves(root2)
     assign_codes(root)
 
-    with io.open(args.output, 'w', encoding='utf-8') as f:
-        f.write(header('10桁(勘定科目コードを最後まで特定する)') + '```\n' + render(root, args.root) + '\n```\n')
-
-    root7 = prune_to_prefix(root2, args.split) if args.split else None
+    root7 = prune_to_prefix(root2, o.split) if o.split else None
     if root7 is not None:
         merge_same_code(root7)
-    if root7 is not None:
-        with io.open(args.tree7, 'w', encoding='utf-8') as f:
-            f.write(header('%d桁(共通部分だけを特定する)' % args.split)
-                    + '```\n' + render(root7, args.root) + '\n```\n')
-
-    with io.open(args.mapfile, 'w', encoding='utf-8-sig', newline='') as f:
-        w = csv.writer(f)
-        w.writerow(['経路', '勘定科目コード'])
-        for p, c in records:
-            w.writerow([args.sep.join(p), c])
-
-    # ---- 集計と検算
-    print('')
-    print('■ 読み取り: %d行を採用 / 利用区分で除外 %d行 / 空行 %d行 / 合計・注記など %d行'
-          % (len(records), skipped, blank, junk))
-    if split_rows:
-        print('  ・%d行で、明細のスラッシュを階層に展開しました' % split_rows)
-    if collapsed:
-        print('  ・%d行で、同じ名前が続く階層を1段に畳みました' % collapsed)
-    if self_leaves:
-        print('  ・%d箇所で「自分を表す葉」を足しました(例: %s)'
-              % (len(self_leaves), '、'.join(self_leaves[:2])))
-    if padded:
-        print('  ・コード %d件を %d桁に揃えました(先頭の0を補完)' % (padded, digits))
-    if dup:
-        print('  ・同じ経路の重複 %d件(先に出てきた行を採用)' % dup)
-
-    warn = []
-    t10, by10, dup10 = count_codes(root)
-    lv10, br10 = len(leaves(root)), len(branches(root))
-    print('')
-    print('■ 10桁ツリー: 最終ラベル %d個 / 判定の段 %d個 / 1段目 %d個'
-          % (lv10, br10, len(root.children)))
-    print('  コード %d個(%s)' % (t10, '、'.join('%d桁 %d個' % (k, v) for k, v in sorted(by10.items()))))
-    print('  → %s' % args.output)
-    if root7 is not None:
-        t7, by7, dup7 = count_codes(root7)
-        print('■ %d桁ツリー: 最終ラベル %d個 / 判定の段 %d個' % (args.split, len(leaves(root7)), len(branches(root7))))
-        print('  コード %d個(%s)' % (t7, '、'.join('%d桁 %d個' % (k, v) for k, v in sorted(by7.items()))))
-        d7 = depth_stats(root7)
-        print('  最終ラベルの深さ: %s'
-              % '、'.join('%d段目 %d個' % (k, v) for k, v in sorted(d7.items())))
-        print('  → %s' % args.tree7)
-        if d7 and max(d7) <= 1:
-            warn.append('%d桁ツリーが階層構造になっていません(すべて1段目)。'
-                        'ツリーではなく一覧になっているので、列の指定かコードの体系を確認してください' % args.split)
-        if dup7:
-            warn.append('%d桁ツリーで同じコードが複数の場所にあります(%d種類。例: %s)'
-                        % (args.split, len(dup7), '、'.join(dup7[:3])))
-    print('■ 対応表: %s' % args.mapfile)
 
     # ---- 異常の検出(利用者への確認が必要なもの)
+    warn = []
+    t10, by10, dup10 = count_codes(root)
+    lv10 = len(leaves(root))
+    if root7 is not None:
+        t7, by7, dup7 = count_codes(root7)
+        d7 = depth_stats(root7)
+        if not d7:
+            warn.append('%d桁ツリーが作れませんでした(全コードの上%d桁が同じ値です)。'
+                        'コードの列か、--split の桁数を確認してください' % (o.split, o.split))
+        elif max(d7) <= 1:
+            warn.append('%d桁ツリーが階層構造になっていません(すべて1段目)。'
+                        'ツリーではなく一覧になっているので、列の指定かコードの体系を確認してください' % o.split)
+        if dup7:
+            warn.append('%d桁ツリーで同じコードが複数の場所にあります(%d種類。例: %s)'
+                        % (o.split, len(dup7), '、'.join(dup7[:3])))
     if t10 != len(records):
         warn.append('採用した %d行に対してコードが %d個しかありません(コードが空の行がある可能性)'
                     % (len(records), t10))
@@ -725,33 +772,162 @@ def convert(path, args):
     if len(root.children) >= 30:
         warn.append('1段目が %d個もあります。区分1ではなく別の列を読んでいる可能性があります'
                     % len(root.children))
+    if exclude:
+        miss = [e for e, k in ex_hits.items() if k == 0]
+        if miss:
+            warn.append('除外リストの %s に一致する行がありません(書き間違いの可能性)'
+                        % '、'.join('「%s」' % e for e in miss[:5]))
+    if freq_allowed is not None:
+        fmiss = [c for c in freq_allowed if c not in freq_hits]
+        if fmiss:
+            warn.append('よく使う科目リストの %d科目がマスタに見つかりません(例: %s)。'
+                        'コードの桁数や体系が合っているか確認してください'
+                        % (len(fmiss), '、'.join('%s %s' % (c, freq_allowed[c][1]) for c in fmiss[:3])))
     if total_data >= 50 and lv10 < total_data * 0.2:
         warn.append('データ %d行に対して最終ラベルが %d個しかありません(明らかに少なすぎます)。'
                     '利用区分の値か、列の指定が違う可能性があります' % (total_data, lv10))
     for k, v in conflict[:3]:
-        warn.append('経路「%s」に別のコードが付いています(%s と %s)' % (args.sep.join(k), v[0], v[1]))
-    dupname = duplicate_branch_names(root)
-    if dupname:
-        warn.append('同じ名前の中間段階が複数の場所にあります(%d件。例: 「%s」が %s)。'
-                    'このままだとDifyワークフローを作る段階でエラーになるため、'
-                    '名前を変えるか、片方をまとめる必要があります'
-                    % (len(dupname), dupname[0][0], ' と '.join(dupname[0][1][:2])))
+        warn.append('経路「%s」に別のコードが付いています(%s と %s)' % (o.sep.join(k), v[0], v[1]))
+
+    tree10 = header('10桁(勘定科目コードを最後まで特定する)') + '```\n' + render(root, o.root) + '\n```\n'
+    tree7 = None
+    if root7 is not None:
+        tree7 = (header('%d桁(共通部分だけを特定する)' % o.split)
+                 + '```\n' + render(root7, o.root) + '\n```\n')
+
+    return {'records': records, 'root': root, 'root7': root7,
+            'tree10': tree10, 'tree7': tree7,
+            'map_rows': [(o.sep.join(p), c) for p, c in records],
+            'warn': warn, 'start': start, 'total_data': total_data,
+            'skipped': skipped, 'blank': blank, 'junk': junk, 'collapsed': collapsed,
+            'split_rows': split_rows, 'self_leaves': self_leaves, 'padded': padded,
+            'digits': digits, 'dup': dup, 'conflict': conflict,
+            'excluded': excluded, 'ex_miss': [e for e, k in ex_hits.items() if k == 0],
+            'freq_total': len(freq_entries) if freq_entries else 0,
+            'freq_selected': len(freq_allowed) if freq_allowed is not None else 0,
+            'freq_used': len(freq_hits), 'freq_dropped': freq_dropped,
+            'freq_active': freq_allowed is not None,
+            'dupname': duplicate_branch_names(root)}
+
+
+def report_lines(res, o, paths=None):
+    """検算レポートの行を組み立てる(CLIでもHTML版でも同じ文面を使う)"""
+    paths = paths or {}
+    out = []
+    out.append('■ 読み取り: %d行を採用 / 利用区分で対象外 %d行 / 除外リスト %d行 / 空行 %d行 / 合計・注記など %d行'
+               % (len(res['records']), res['skipped'], res.get('excluded', 0),
+                  res['blank'], res['junk']))
+    if res['split_rows']:
+        out.append('  ・%d行で、明細のスラッシュを階層に展開しました' % res['split_rows'])
+    if res['collapsed']:
+        out.append('  ・%d行で、同じ名前が続く階層を1段に畳みました' % res['collapsed'])
+    if res['self_leaves']:
+        out.append('  ・%d箇所で「自分を表す葉」を足しました(例: %s)'
+                   % (len(res['self_leaves']), '、'.join(res['self_leaves'][:2])))
+    if res['padded']:
+        out.append('  ・コード %d件を %d桁に揃えました(先頭の0を補完)' % (res['padded'], res['digits']))
+    if res['dup']:
+        out.append('  ・同じ経路の重複 %d件(先に出てきた行を採用)' % res['dup'])
+    if res.get('excluded'):
+        out.append('  ・除外リストで %d行を除外しました' % res['excluded'])
+    if res.get('freq_active'):
+        cond = []
+        if getattr(o, 'freq_min', 0):
+            cond.append('データ件数 %d件以上' % o.freq_min)
+        if getattr(o, 'freq_top', 0):
+            cond.append('件数の多い順に上位 %d科目' % o.freq_top)
+        out.append('■ よく使う科目リストで絞り込み: リスト %d科目 → 条件該当 %d科目(%s)'
+                   % (res['freq_total'], res['freq_selected'], ' / '.join(cond) or '条件なし=リスト全部'))
+        out.append('  ・マスタと一致してツリーに採用: %d科目 / リスト外のため対象外: %d行'
+                   % (res['freq_used'], res['freq_dropped']))
+
+    root, root7 = res['root'], res['root7']
+    t10, by10, _ = count_codes(root)
+    fmt = lambda by: '、'.join('%d桁 %d個' % (k, v) for k, v in sorted(by.items()))
+    out.append('')
+    out.append('■ 10桁ツリー: 最終ラベル %d個 / 判定の段 %d個 / 1段目 %d個'
+               % (len(leaves(root)), len(branches(root)), len(root.children)))
+    out.append('  コード %d個(%s)' % (t10, fmt(by10)))
+    if paths.get('tree10'):
+        out.append('  → %s' % paths['tree10'])
+    if root7 is not None:
+        t7, by7, _ = count_codes(root7)
+        d7 = depth_stats(root7)
+        out.append('■ %d桁ツリー: 最終ラベル %d個 / 判定の段 %d個'
+                   % (o.split, len(leaves(root7)), len(branches(root7))))
+        out.append('  コード %d個(%s)' % (t7, fmt(by7)))
+        out.append('  最終ラベルの深さ: %s'
+                   % '、'.join('%d段目 %d個' % (k, v) for k, v in sorted(d7.items())))
+        if paths.get('tree7'):
+            out.append('  → %s' % paths['tree7'])
+    if paths.get('map'):
+        out.append('■ 対応表: %s' % paths['map'])
+
+    if res.get('dupname'):
+        dn = res['dupname']
+        out.append('')
+        out.append('■ 参考: 同じ名前の中間段階が %d件あります(別のものとして扱うので問題ありません)' % len(dn))
+        for label, paths in dn[:5]:
+            out.append('   ・%s … %s' % (label, ' / '.join(paths[:3])))
+
     wide = sorted(((len(b.children), '/'.join(b.path())) for b in branches(root)), reverse=True)
     if wide and wide[0][0] > 20:
-        print('')
-        print('■ 参考: 選択肢が20を超える段があります(1回の判定で選ぶ数が多いと精度が落ちやすい)')
+        out.append('')
+        out.append('■ 参考: 選択肢が20を超える段があります(1回の判定で選ぶ数が多いと精度が落ちやすい)')
         for cnt, p in wide[:5]:
             if cnt > 20:
-                print('   ・%s … %d択' % (p, cnt))
+                out.append('   ・%s … %d択' % (p, cnt))
 
-    if warn:
-        print('')
-        print('■ 確認してほしいこと(このまま進めず、利用者に聞いてください):')
-        for w in warn:
-            print('   ! ' + w)
+    out.append('')
+    if res['warn']:
+        out.append('■ 確認してほしいこと(このまま進めず、利用者に聞いてください):')
+        for w in res['warn']:
+            out.append('   ! ' + w)
     else:
-        print('')
-        print('■ 検算: 数字に不自然な点はありません(採用行数とコード数が一致しています)')
+        out.append('■ 検算: 数字に不自然な点はありません(採用行数とコード数が一致しています)')
+    return out
+
+
+def convert(path, args):
+    sheet, rows, allsheets = read_table(path, args.sheet)
+    cols = parse_cols(args.cols)
+    ex = [x for x in (args.exclude or '').split(',') if norm(x)]
+    if getattr(args, 'exclude_file', None):
+        for line in io.open(args.exclude_file, encoding='utf-8-sig'):
+            line = norm(line)
+            if line and not line.startswith('#'):
+                ex.append(line)
+    args.exclude = ex
+    args.freq_entries = None
+    if getattr(args, 'freq', None):
+        _, frows, _ = read_table(args.freq)
+        args.freq_entries = read_freq_rows(frows)
+        if not args.freq_entries:
+            raise ToolError('よく使う科目リスト %s から科目を読めませんでした。\n'
+                            'A列=勘定科目コード / B列=科目名 / C列=データ件数 の並びか確認してください。'
+                            % args.freq)
+    res = convert_rows(rows, cols, args)
+
+    print('■ シート「%s」/ データ %d行目から' % (sheet, res['start'] + 1))
+    print('  読む列: ' + ' / '.join('%s=%s列' % (ROLE_JP[r], letter(cols[r])) for r in ROLES))
+
+    with io.open(args.output, 'w', encoding='utf-8') as f:
+        f.write(res['tree10'])
+    if res['tree7'] is not None:
+        with io.open(args.tree7, 'w', encoding='utf-8') as f:
+            f.write(res['tree7'])
+    with io.open(args.mapfile, 'w', encoding='utf-8-sig', newline='') as f:
+        w = csv.writer(f)
+        w.writerow(['経路', '勘定科目コード'])
+        for p, c in res['map_rows']:
+            w.writerow([p, c])
+
+    print('')
+    paths = {'tree10': args.output, 'map': args.mapfile}
+    if res['tree7'] is not None:
+        paths['tree7'] = args.tree7
+    for line in report_lines(res, args, paths):
+        print(line)
 
 
 def header(kind):
@@ -774,6 +950,12 @@ def main():
     ap.add_argument('--cols', default=DEFAULT_COLS, help='区分1,区分2,明細,コード,利用区分 の列(既定: %s)' % DEFAULT_COLS)
     ap.add_argument('--start-row', type=int, default=0, help='データが始まる行(1始まり。既定: 自動判定)')
     ap.add_argument('--use', default='○', help="利用区分がこの値の行だけ使う(既定: ○。--use '' で全行)")
+    ap.add_argument('--exclude', default='', help='除外する科目(科目名かコードを「,」区切りで)')
+    ap.add_argument('--exclude-file', help='除外する科目の一覧ファイル(1行に1つ。#で始まる行は無視)')
+    ap.add_argument('--freq', help='よく使う勘定科目リスト(.xlsx/.csv。A=コード/B=科目名/C=データ件数)。'
+                                   '指定するとリストに該当する科目だけでツリーを作る')
+    ap.add_argument('--freq-min', type=int, default=0, help='データ件数がこの値以上の科目だけ使う')
+    ap.add_argument('--freq-top', type=int, default=0, help='件数の多い順に上位この数の科目だけ使う')
     ap.add_argument('--sep', default='／', help='対応表で経路をつなぐ区切り')
     ap.add_argument('--detail-sep', default='／/', help='勘定科目明細を階層に分ける区切り文字')
     ap.add_argument('--split', type=int, default=7, help='7桁ツリーの桁数(0で作らない)')
