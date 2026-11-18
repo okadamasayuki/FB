@@ -25,6 +25,48 @@
       "size": 1363306,
       "uploadedAt": "2026-11-12T09:50:21+09:00",
       "note": "CPAテキストマーカー（RAG）のシステム構成図（最新・16:9）"
+    },
+    {
+      "path": "files/CPAテキストマーカー_Azure構成図.png",
+      "name": "CPAテキストマーカー_Azure構成図.png",
+      "size": 681201,
+      "uploadedAt": "2026-11-19T01:54:47+09:00",
+      "note": "Azure 版の構成図（最新・Document Intelligence なし・16:9）"
+    },
+    {
+      "path": "files/講師への確認_1_進み具合.png",
+      "name": "講師への確認_1_進み具合.png",
+      "size": 624846,
+      "uploadedAt": "2026-11-19T01:54:47+09:00",
+      "note": "講師への確認スライド 1/5：Azure 版の進み具合"
+    },
+    {
+      "path": "files/講師への確認_2_確認したいこと一覧.png",
+      "name": "講師への確認_2_確認したいこと一覧.png",
+      "size": 328659,
+      "uploadedAt": "2026-11-19T01:54:47+09:00",
+      "note": "講師への確認スライド 2/5：確認したいこと（3つ）"
+    },
+    {
+      "path": "files/講師への確認_3_Claude.png",
+      "name": "講師への確認_3_Claude.png",
+      "size": 617033,
+      "uploadedAt": "2026-11-19T01:54:47+09:00",
+      "note": "講師への確認スライド 3/5：Foundry で Claude を使ってもいいか"
+    },
+    {
+      "path": "files/講師への確認_4_AISearch.png",
+      "name": "講師への確認_4_AISearch.png",
+      "size": 560084,
+      "uploadedAt": "2026-11-19T01:54:47+09:00",
+      "note": "講師への確認スライド 4/5：AI Search を作ってもいいか"
+    },
+    {
+      "path": "files/講師への確認_5_サインイン.png",
+      "name": "講師への確認_5_サインイン.png",
+      "size": 592300,
+      "uploadedAt": "2026-11-19T01:54:47+09:00",
+      "note": "講師への確認スライド 5/5：Entra ID にアプリの登録を作ってもいいか"
     }
   ]
 }
