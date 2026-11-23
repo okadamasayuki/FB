@@ -22,9 +22,16 @@
     {
       "path": "files/CPAテキストマーカー_Azure構成図.png",
       "name": "CPAテキストマーカー_Azure構成図.png",
-      "size": 697300,
-      "uploadedAt": "2026-11-19T02:07:38+09:00",
-      "note": "Azure 版の構成図（最新・インデックスの場所つき・16:9）"
+      "size": 538339,
+      "uploadedAt": "2026-11-24T01:04:58+09:00",
+      "note": "Azure 版の構成図（最新・iPhone から AI Search と Foundry の GPT を直接使う形・16:9）"
+    },
+    {
+      "path": "files/CPAテキストマーカー_Azure処理の流れ.png",
+      "name": "CPAテキストマーカー_Azure処理の流れ.png",
+      "size": 719988,
+      "uploadedAt": "2026-11-24T01:04:58+09:00",
+      "note": "Azure 版の処理の流れ（準備と質問の手順を詳しく・16:9）"
     },
     {
       "path": "files/講師への確認_1_進み具合.png",
